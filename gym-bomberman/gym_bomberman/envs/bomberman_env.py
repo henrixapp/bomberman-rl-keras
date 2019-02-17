@@ -121,10 +121,8 @@ class BombermanEnv(gym.Env):
             self.bombs.append(self.player.make_bomb())
             self.player.bombs_left -= 1
             self.player.events.append(e.BOMB_DROPPED)
-            reward= 1.0# give a little bit credit
         elif action == WAIT:
             self.player.events.append(e.WAITED)
-            reward = -0.1
         # collect coins
         for coin in self.coins:
             if coin.collectable:
@@ -166,9 +164,11 @@ class BombermanEnv(gym.Env):
         # explosions
         # Explosions
         agents_hit = set()
+        detonation = False
         for explosion in self.explosions:
             # Kill agents
             if explosion.timer > 1:
+                detonation = True
                 #for a in self.active_agents:
                 a = self.player
                 if self.player.alive:
@@ -200,15 +200,19 @@ class BombermanEnv(gym.Env):
         #    self.put_down_agent(a)
         self.explosions = [e for e in self.explosions if e.active]
         # check whether coins where collected
-        done = self.check_if_all_coins_collected() or self.all_players_dead()
-        
+        self.round=self.round+1
+        done = self.check_if_all_coins_collected() or self.all_players_dead() or self.round>200
+        if self.round>200:
+            reward = -100
         if not self.player.alive:
-            reward=-100
-        if self.check_if_all_coins_collected:
-            reward = self.player.score
+            reward=-1000
+        elif detonation:
+            reward=10
+        reward = reward + self.player.score*10
+        
         return (self._get_obs(), reward, done, {})
     def check_if_all_coins_collected(self):
-        return len([c for c in self.coins if not c.collected])==0
+        return  len([c for c in self.coins if c.collected])==len(self.coins)
     def all_players_dead(self):
         return not self.player.alive
         #return length([a for a in self.players if a])
@@ -271,6 +275,7 @@ class BombermanEnv(gym.Env):
                         break
 
     def reset(self):
+        self.round =0
         self.generate_arena()
         self.player = Agent(1,[1,1])
         self.bombs = []
