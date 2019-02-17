@@ -102,6 +102,7 @@ class BombermanEnv(gym.Env):
                 is_free = is_free and (obstacle.x != x or obstacle.y != y)
         return is_free
     def step(self, action):
+        reward = 0 #0 # TODO coins collected as reward
         assert self.action_space.contains(action)
         if action == UP and self.tile_is_free(self.player.x, self.player.y - 1):
             self.player.y -= 1
@@ -120,8 +121,10 @@ class BombermanEnv(gym.Env):
             self.bombs.append(self.player.make_bomb())
             self.player.bombs_left -= 1
             self.player.events.append(e.BOMB_DROPPED)
+            reward= 1.0# give a little bit credit
         elif action == WAIT:
             self.player.events.append(e.WAITED)
+            reward = -0.1
         # collect coins
         for coin in self.coins:
             if coin.collectable:
@@ -198,7 +201,7 @@ class BombermanEnv(gym.Env):
         self.explosions = [e for e in self.explosions if e.active]
         # check whether coins where collected
         done = self.check_if_all_coins_collected() or self.all_players_dead()
-        reward = 0 #0 # TODO coins collected as reward
+        
         if not self.player.alive:
             reward=-100
         if self.check_if_all_coins_collected:

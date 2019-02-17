@@ -51,7 +51,7 @@ env = gym.make(args.env_name)
 np.random.seed(123)
 env.seed(123)
 nb_actions = env.action_space.n
-
+print(nb_actions)
 # Next, we build our model. We use the same model that was described by Mnih et al. (2015).
 input_shape = (WINDOW_LENGTH,) + INPUT_SHAPE
 print(input_shape)
@@ -95,7 +95,7 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 # The trade-off between exploration and exploitation is difficult and an on-going research topic.
 # If you want, you can experiment with the parameters or use a different policy. Another popular one
 # is Boltzmann-style exploration:
-# policy = BoltzmannQPolicy(tau=1.)
+policy = BoltzmannQPolicy(tau=1.)
 # Feel free to give it a try!
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
