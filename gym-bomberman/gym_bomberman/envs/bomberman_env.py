@@ -1,4 +1,5 @@
 import gym
+import sys
 from gym import spaces
 from gym.utils import seeding
 import numpy as np
@@ -63,7 +64,7 @@ class Coin(Item):
     def __init__(self, pos):
         super(Coin, self).__init__(pos)
         self.collectable = False
-
+        self.collected = False
     def get_state(self):
         return (self.x, self.y)
 class Explosion(object):
@@ -75,20 +76,22 @@ class Explosion(object):
 #
 class Log(object):
     def info(self,message):
-        print("INFO: "+str(message))
+        pass
+        #print("INFO: "+str(message))
     def debug(self,message):
-        print("DEBUG: "+str(message))
+        pass
+        #print("DEBUG: "+str(message))
 class BombermanEnv(gym.Env):
     def __init__(self, bombermanrlSettings=s):
         self.screen_height = bombermanrlSettings.rows
         self.screen_width = bombermanrlSettings.cols
         self.action_space = spaces.Discrete(6)# six different actions see above
-        self.observation_space = spaces.Box(low=-127, high=127, shape=(self.screen_height, self.screen_width, 1), dtype=np.int8)
+        self.observation_space = spaces.Box(low=-3, high=3, shape=(self.screen_height, self.screen_width), dtype=np.int8)
         self.seed()
         self.logger = Log()
         # Start the first game
         self.reset()
-
+        self.env = self
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
@@ -126,6 +129,7 @@ class BombermanEnv(gym.Env):
                 a = self.player
                 if a.x == coin.x and a.y == coin.y:
                     coin.collectable = False
+                    coin.collected = True
                     self.logger.info(f'Agent <{a.id}> picked up coin at {(a.x, a.y)} and receives 1 point')
                     a.update_score(s.reward_coin)
                     a.events.append(e.COIN_COLLECTED)
@@ -155,7 +159,6 @@ class BombermanEnv(gym.Env):
             # Progress countdown
             else:
                 bomb.timer -= 1
-                self.logger.debug("Time"+str(bomb.timer))
         self.bombs = [b for b in self.bombs if b.active]
         # explosions
         # Explosions
@@ -183,8 +186,9 @@ class BombermanEnv(gym.Env):
                 explosion.active = False
             # Progress countdown
             explosion.timer -= 1
-        #for a in agents_hit:
-        #    a.dead = True
+        a = self.player
+        if a in agents_hit:
+            a.alive = False
         #    self.active_agents.remove(a)
         #    a.events.append(e.GOT_KILLED)
         #    for aa in self.active_agents:
@@ -194,10 +198,14 @@ class BombermanEnv(gym.Env):
         self.explosions = [e for e in self.explosions if e.active]
         # check whether coins where collected
         done = self.check_if_all_coins_collected() or self.all_players_dead()
-        reward = 0 # TODO coins collected as reward
-        return self._get_obs(), reward, done, {}
+        reward = 0 #0 # TODO coins collected as reward
+        if not self.player.alive:
+            reward=-100
+        if self.check_if_all_coins_collected:
+            reward = self.player.score
+        return (self._get_obs(), reward, done, {})
     def check_if_all_coins_collected(self):
-        return len(self.coins)==0
+        return len([c for c in self.coins if not c.collected])==0
     def all_players_dead(self):
         return not self.player.alive
         #return length([a for a in self.players if a])
@@ -228,7 +236,7 @@ class BombermanEnv(gym.Env):
         return rendered_map
     def generate_arena(self):
         # Arena with wall and crate layout
-        self.arena = (np.random.rand(s.cols, s.rows) < s.crate_density).astype(int)
+        self.arena = (np.random.rand(s.cols, s.rows) < s.crate_density).astype(np.int8)
         self.arena[:1, :] = -1
         self.arena[-1:,:] = -1
         self.arena[:, :1] = -1
@@ -265,8 +273,23 @@ class BombermanEnv(gym.Env):
         self.bombs = []
         self.explosions =[]
         return self._get_obs()
-    def render(self):
-        print(self._get_obs())
+    def render(self,mode='human'):
+        outfile = StringIO() if mode == 'ansi' else sys.stdout
+    # 2: Coin
+    #    -1: WALL
+    #    -2: Bomb
+    #    -3: Explosion
+    #    0 : Free
+    #    1 : Crate
+    #    3,4,5,6: player
+        map = self._get_obs()
+        for zeile in map:
+            for element in zeile:
+                outfile.write("{}".format(["💥","\u1F9E8","❌","👣","❎","🏆","😎"][element+3]))
+            outfile.write("\n")
+        if mode != 'human':
+            with closing(outfile):
+                return outfile.getvalue()
 if __name__ == "__main__":
     benv = BombermanEnv(s)
     benv.step(RIGHT)
