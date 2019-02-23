@@ -17,16 +17,16 @@ from rl.core import Processor
 from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 
 
-INPUT_SHAPE = (68, 68)
+INPUT_SHAPE = (16, 16)
 WINDOW_LENGTH = 4
 
 
 class AtariProcessor(Processor):
     def process_observation(self, observation):
         assert observation.ndim == 2  # (height, width, channel)
-        img = Image.fromarray(observation)
-        img = img.resize(INPUT_SHAPE).convert('L')  # resize and convert to grayscale
-        processed_observation = np.array(img)
+        #img = Image.fromarray(observation)
+        #img = img.resize(INPUT_SHAPE).convert('L')  # resize and convert to grayscale
+        processed_observation = observation[0:16,0:16]
         #assert processed_observation.shape == INPUT_SHAPE
         return processed_observation.astype('uint8')  # saves storage in experience memory
 
@@ -38,11 +38,11 @@ class AtariProcessor(Processor):
         return processed_batch
 
     def process_reward(self, reward):
-        return np.clip(reward/100, -1., 1.)
+        return reward
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
-parser.add_argument('--env-name', type=str, default='bomberman-v0')
+parser.add_argument('--env-name', type=str, default='coinman-v0')
 parser.add_argument('--weights', type=str, default=None)
 args = parser.parse_args()
 
@@ -65,15 +65,14 @@ elif K.image_dim_ordering() == 'th':
     model.add(Permute((1, 2, 3), input_shape=input_shape))
 else:
     raise RuntimeError('Unknown image_dim_ordering.')
+
 #model.add(Flatten(input_shape=(1,) + env.observation_space.shape))
-model.add(Convolution2D(32, (8, 8), strides=(4, 4)))
+model.add(Convolution2D(16, (4, 4), strides=(2, 2)))
 model.add(Activation('relu'))
-model.add(Convolution2D(64, (4, 4), strides=(2, 2)))
-model.add(Activation('relu'))
-model.add(Convolution2D(64, (3, 3), strides=(1, 1)))
+model.add(Convolution2D(32, (2, 2), strides=(1, 1)))
 model.add(Activation('relu'))
 model.add(Flatten())
-model.add(Dense(512))
+model.add(Dense(256))
 model.add(Activation('relu'))
 model.add(Dense(nb_actions))
 model.add(Activation('linear'))
@@ -109,9 +108,9 @@ if args.mode == 'train':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     checkpoint_weights_filename = 'dqn_' + args.env_name + '_weights_{step}.h5f'
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
-    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
+    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=25000)]
     callbacks += [FileLogger(log_filename, interval=100)]
-    dqn.fit(env, callbacks=callbacks, nb_steps=1750000, log_interval=10000)
+    dqn.fit(env, callbacks=callbacks, nb_steps=1000000, log_interval=10000,visualize=False)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=True)

@@ -1,1 +1,2 @@
 from gym_bomberman.envs.bomberman_env import BombermanEnv
+from gym_bomberman.envs.coinman_env import CoinmanEnv
