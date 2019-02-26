@@ -81,11 +81,11 @@ class Log(object):
     def debug(self,message):
         pass
         #print("DEBUG: "+str(message))
-class BombermanEnv(gym.Env):
+class Coinman2Env(gym.Env):
     def __init__(self, bombermanrlSettings=s):
-        self.screen_height = bombermanrlSettings.rows
-        self.screen_width = bombermanrlSettings.cols
-        self.action_space = spaces.Discrete(6)# six different actions see above
+        self.screen_height = 8
+        self.screen_width = 8
+        self.action_space = spaces.Discrete(4)# six different actions see above
         self.observation_space = spaces.Box(low=-3, high=3, shape=(self.screen_height, self.screen_width), dtype=np.int8)
         self.seed()
         self.logger = Log()
@@ -102,20 +102,25 @@ class BombermanEnv(gym.Env):
                 is_free = is_free and (obstacle.x != x or obstacle.y != y)
         return is_free
     def step(self, action):
-        reward = 0 #0 # TODO coins collected as reward
+        reward = -1 #0 # TODO coins collected as reward
         assert self.action_space.contains(action)
+        #print(action)
         if action == UP and self.tile_is_free(self.player.x, self.player.y - 1):
             self.player.y -= 1
             self.player.events.append(e.MOVED_UP)
+            #reward=10
         elif action == DOWN and self.tile_is_free(self.player.x, self.player.y + 1):
             self.player.y += 1
             self.player.events.append(e.MOVED_DOWN)
+            #reward =10
         elif action == LEFT and self.tile_is_free(self.player.x - 1, self.player.y):
             self.player.x -= 1
             self.player.events.append(e.MOVED_LEFT)
+            #reward = 10
         elif action == RIGHT and self.tile_is_free(self.player.x + 1, self.player.y):
             self.player.x += 1
             self.player.events.append(e.MOVED_RIGHT)
+            #reward = 10
         elif action == BOMB and self.player.bombs_left > 0:
             self.logger.info(f'player <{self.player.id}> drops bomb at {(self.player.x, self.player.y)}')
             self.bombs.append(self.player.make_bomb())
@@ -123,6 +128,9 @@ class BombermanEnv(gym.Env):
             self.player.events.append(e.BOMB_DROPPED)
         elif action == WAIT:
             self.player.events.append(e.WAITED)
+            #reward=-100
+        else:
+            reward= -1 # penalize wrong move
         # collect coins
         for coin in self.coins:
             if coin.collectable:
@@ -134,7 +142,7 @@ class BombermanEnv(gym.Env):
                     self.logger.info(f'Agent <{a.id}> picked up coin at {(a.x, a.y)} and receives 1 point')
                     a.update_score(s.reward_coin)
                     a.events.append(e.COIN_COLLECTED)
-                    reward = 1
+                    reward=10
                     #a.trophies.append(Agent.coin_trophy)
         # simulate bombs and explosion
         #bombs
@@ -156,7 +164,6 @@ class BombermanEnv(gym.Env):
                                 bomb.owner.events.append(e.COIN_FOUND)
                 # Create explosion
                 self.explosions.append(Explosion(blast_coords, bomb.owner))
-                #reward= reward+1
                 bomb.active = False
                 bomb.owner.bombs_left += 1
             # Progress countdown
@@ -170,7 +177,6 @@ class BombermanEnv(gym.Env):
         for explosion in self.explosions:
             # Kill agents
             if explosion.timer > 1:
-                reward +=1
                 detonation = True
                 #for a in self.active_agents:
                 a = self.player
@@ -204,12 +210,12 @@ class BombermanEnv(gym.Env):
         self.explosions = [e for e in self.explosions if e.active]
         # check whether coins where collected
         self.round=self.round+1
-        done = self.check_if_all_coins_collected() or self.all_players_dead() or self.round>200
-        if self.round>200:
+        done = self.check_if_all_coins_collected() or self.all_players_dead() or self.round>100
+        if self.round>100:
             reward = -1
         if not self.player.alive:
             reward=-1
-        #reward = reward + self.player.score*10
+        #reward = reward + self.player.score*1000
         
         return (self._get_obs(), reward, done, {})
     def check_if_all_coins_collected(self):
@@ -244,17 +250,18 @@ class BombermanEnv(gym.Env):
         return rendered_map
     def generate_arena(self):
         # Arena with wall and crate layout
-        self.arena = (np.random.rand(s.cols, s.rows) < s.crate_density).astype(np.int8)
+        self.arena = np.zeros((8,8), dtype=np.int8)
         self.arena[:1, :] = -1
         self.arena[-1:,:] = -1
         self.arena[:, :1] = -1
         self.arena[:,-1:] = -1
-        for x in range(s.cols):
-            for y in range(s.rows):
+        for x in range(8):
+            for y in range(8):
                 if (x+1)*(y+1) % 2 == 1:
-                    self.arena[x,y] = -1
+                    pass
+                #    self.arena[x,y] = -1
         # Starting positions
-        self.start_positions = [(1,1), (1,s.rows-2), (s.cols-2,1), (s.cols-2,s.rows-2)]
+        self.start_positions = [(1,1), (1,8-2), (8-2,1), (8-2,8-2)]
         np.random.shuffle(self.start_positions)
         for (x,y) in self.start_positions:
             for (xx,yy) in [(x,y), (x-1,y), (x+1,y), (x,y-1), (x,y+1)]:
@@ -262,17 +269,19 @@ class BombermanEnv(gym.Env):
                     self.arena[xx,yy] = 0
         # Distribute coins evenly
         self.coins = []
-        for i in range(3):
-            for j in range(3):
-                n_crates = (self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
-                while True:
-                    x, y = np.random.randint(1+5*i,6+5*i), np.random.randint(1+5*j,6+5*j)
-                    if n_crates == 0 and self.arena[x,y] == 0:
-                        self.coins.append(Coin((x,y)))
-                        self.coins[-1].collectable = True
-                        break
-                    elif self.arena[x,y] == 1:
-                        self.coins.append(Coin((x,y)))
+        for k in range(1):
+            for i in range(8):
+                for j in range(8):
+                    n_crates = 0#(self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
+                    while True:
+                        x, y = i,j#np.random.randint(0,7), np.random.randint(0,7)
+                        if n_crates == 0 and self.arena[x,y] == 0 and np.random.randint(0,100)<90:
+                            self.coins.append(Coin((x,y)))
+                            self.coins[-1].collectable = True
+                            break
+                        elif self.arena[x,y] == 1:
+                            self.coins.append(Coin((x,y)))
+                            break
                         break
 
     def reset(self):
@@ -282,7 +291,7 @@ class BombermanEnv(gym.Env):
         self.bombs = []
         self.explosions =[]
         return self._get_obs()
-    def render(self,mode='human'):
+    def render(self,mode='ansi'):
         outfile = StringIO() if mode == 'ansi' else sys.stdout
     # 2: Coin
     #    -1: WALL

@@ -85,7 +85,7 @@ class CoinmanEnv(gym.Env):
     def __init__(self, bombermanrlSettings=s):
         self.screen_height = bombermanrlSettings.rows
         self.screen_width = bombermanrlSettings.cols
-        self.action_space = spaces.Discrete(6)# six different actions see above
+        self.action_space = spaces.Discrete(4)# six different actions see above
         self.observation_space = spaces.Box(low=-3, high=3, shape=(self.screen_height, self.screen_width), dtype=np.int8)
         self.seed()
         self.logger = Log()
@@ -104,6 +104,7 @@ class CoinmanEnv(gym.Env):
     def step(self, action):
         reward = 0 #0 # TODO coins collected as reward
         assert self.action_space.contains(action)
+        #print(action)
         if action == UP and self.tile_is_free(self.player.x, self.player.y - 1):
             self.player.y -= 1
             self.player.events.append(e.MOVED_UP)
@@ -129,7 +130,7 @@ class CoinmanEnv(gym.Env):
             self.player.events.append(e.WAITED)
             #reward=-100
         else:
-            reward= -100 # penalize wrong move
+            reward= -1 # penalize wrong move
         # collect coins
         for coin in self.coins:
             if coin.collectable:
@@ -141,7 +142,7 @@ class CoinmanEnv(gym.Env):
                     self.logger.info(f'Agent <{a.id}> picked up coin at {(a.x, a.y)} and receives 1 point')
                     a.update_score(s.reward_coin)
                     a.events.append(e.COIN_COLLECTED)
-                    reward=1
+                    reward=10
                     #a.trophies.append(Agent.coin_trophy)
         # simulate bombs and explosion
         #bombs
@@ -209,8 +210,8 @@ class CoinmanEnv(gym.Env):
         self.explosions = [e for e in self.explosions if e.active]
         # check whether coins where collected
         self.round=self.round+1
-        done = self.check_if_all_coins_collected() or self.all_players_dead() or self.round>100
-        if self.round>100:
+        done = self.check_if_all_coins_collected() or self.all_players_dead() or self.round>400
+        if self.round>400:
             reward = -1
         if not self.player.alive:
             reward=-1
@@ -257,7 +258,8 @@ class CoinmanEnv(gym.Env):
         for x in range(s.cols):
             for y in range(s.rows):
                 if (x+1)*(y+1) % 2 == 1:
-                    self.arena[x,y] = -1
+                    pass
+                #    self.arena[x,y] = -1
         # Starting positions
         self.start_positions = [(1,1), (1,s.rows-2), (s.cols-2,1), (s.cols-2,s.rows-2)]
         np.random.shuffle(self.start_positions)
@@ -267,27 +269,28 @@ class CoinmanEnv(gym.Env):
                     self.arena[xx,yy] = 0
         # Distribute coins evenly
         self.coins = []
-        for i in range(3):
-            for j in range(3):
-                n_crates = (self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
-                while True:
-                    x, y = np.random.randint(1+5*i,6+5*i), np.random.randint(1+5*j,6+5*j)
-                    if n_crates == 0 and self.arena[x,y] == 0:
-                        self.coins.append(Coin((x,y)))
-                        self.coins[-1].collectable = True
-                        break
-                    elif self.arena[x,y] == 1:
-                        self.coins.append(Coin((x,y)))
-                        break
+        for k in range(2):
+            for i in range(3):
+                for j in range(3):
+                    n_crates = (self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
+                    while True:
+                        x, y = np.random.randint(1+5*i,6+5*i), np.random.randint(1+5*j,6+5*j)
+                        if n_crates == 0 and self.arena[x,y] == 0:
+                            self.coins.append(Coin((x,y)))
+                            self.coins[-1].collectable = True
+                            break
+                        elif self.arena[x,y] == 1:
+                            self.coins.append(Coin((x,y)))
+                            break
 
     def reset(self):
         self.round =0
         self.generate_arena()
-        self.player = Agent(1,[1,1])
+        self.player = Agent(1,[8,8])
         self.bombs = []
         self.explosions =[]
         return self._get_obs()
-    def render(self,mode='human'):
+    def render(self,mode='ansi'):
         outfile = StringIO() if mode == 'ansi' else sys.stdout
     # 2: Coin
     #    -1: WALL

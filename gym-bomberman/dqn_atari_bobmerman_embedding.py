@@ -15,10 +15,12 @@ from rl.policy import LinearAnnealedPolicy, BoltzmannQPolicy, EpsGreedyQPolicy
 from rl.memory import SequentialMemory
 from rl.core import Processor
 from rl.callbacks import FileLogger, ModelIntervalCheckpoint
+import keras
+import keras.callbacks
 
 
 INPUT_SHAPE = (16, 16)
-WINDOW_LENGTH = 4
+WINDOW_LENGTH = 1
 
 
 class AtariProcessor(Processor):
@@ -34,8 +36,8 @@ class AtariProcessor(Processor):
         # We could perform this processing step in `process_observation`. In this case, however,
         # we would need to store a `float32` array instead, which is 4x more memory intensive than
         # an `uint8` array. This matters if we store 1M observations.
-        
-        return batch
+        processed_batch = (batch.astype('float32')+3) / 7
+        return processed_batch
 
     def process_reward(self, reward):
         return reward
@@ -65,15 +67,16 @@ elif K.image_dim_ordering() == 'th':
     model.add(Permute((1, 2, 3), input_shape=input_shape))
 else:
     raise RuntimeError('Unknown image_dim_ordering.')
-window_length = 4
+window_length = 1
 #model.add(Flatten(input_shape=(1,) + env.observation_space.shape))
 model = Sequential([
             Flatten(input_shape=(window_length, 16, 16)),
             Dense(256),
             Activation("relu"),
             Dense(256),
+           
             Activation("relu"),
-            Dense(6),
+            Dense(4),
             Activation("linear")
         ])
 print(model.summary())
@@ -94,7 +97,7 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 # The trade-off between exploration and exploitation is difficult and an on-going research topic.
 # If you want, you can experiment with the parameters or use a different policy. Another popular one
 # is Boltzmann-style exploration:
-#policy = BoltzmannQPolicy(tau=.05)
+policy = BoltzmannQPolicy()
 # Feel free to give it a try!
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
@@ -110,7 +113,9 @@ if args.mode == 'train':
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=25000)]
     callbacks += [FileLogger(log_filename, interval=100)]
-    dqn.fit(env, callbacks=callbacks, nb_steps=1000000, log_interval=10000,visualize=False)
+    callbacks +=[keras.callbacks.TensorBoard(log_dir='./Graph', histogram_freq=0,  
+          write_graph=True, write_images=True)]
+    dqn.fit(env, callbacks=callbacks, nb_steps=150000, log_interval=15000,visualize=False)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=True)
@@ -122,4 +127,4 @@ elif args.mode == 'test':
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
-    dqn.test(env, nb_episodes=1, visualize=True)
+    dqn.test(env, nb_episodes=4, visualize=True)
