@@ -4,6 +4,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 import threading
 import gym
+import gym_bomberman
 import multiprocessing
 import numpy as np
 from queue import Queue
@@ -18,7 +19,7 @@ from tensorflow.python.keras import layers
 tf.enable_eager_execution()
 
 parser = argparse.ArgumentParser(description='Run A3C algorithm on the game '
-                                             'Cartpole.')
+                                             'Coinman2.')
 parser.add_argument('--algorithm', default='a3c', type=str,
                     help='Choose between \'a3c\' and \'random\'.')
 parser.add_argument('--train', dest='train', action='store_true',
@@ -27,7 +28,7 @@ parser.add_argument('--lr', default=0.001,
                     help='Learning rate for the shared optimizer.')
 parser.add_argument('--update-freq', default=20, type=int,
                     help='How often to update the global model.')
-parser.add_argument('--max-eps', default=1000, type=int,
+parser.add_argument('--max-eps', default=10000, type=int,
                     help='Global maximum number of episodes to run.')
 parser.add_argument('--gamma', default=0.99,
                     help='Discount factor of rewards.')
@@ -40,16 +41,20 @@ class ActorCriticModel(keras.Model):
     super(ActorCriticModel, self).__init__()
     self.state_size = state_size
     self.action_size = action_size
-    self.dense1 = layers.Dense(100, activation='relu')
+    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,8, 8))
+    self.dense1 = layers.Dense(256)
+    self.activation1 = layers.Activation('relu')
     self.policy_logits = layers.Dense(action_size)
-    self.dense2 = layers.Dense(100, activation='relu')
+    self.dense2 = layers.Dense(256, activation='relu')
     self.values = layers.Dense(1)
 
   def call(self, inputs):
     # Forward pass
-    x = self.dense1(inputs)
+    z= self.flatten0(inputs)
+    g = self.dense1(z)
+    x = self.activation1(g)
     logits = self.policy_logits(x)
-    v1 = self.dense2(inputs)
+    v1 = self.dense2(z)
     values = self.values(v1)
     return logits, values
 
@@ -127,20 +132,21 @@ class RandomAgent:
 
 class MasterAgent():
   def __init__(self):
-    self.game_name = 'CartPole-v0'
+    self.game_name = 'coinman2-v0'
     save_dir = args.save_dir
     self.save_dir = save_dir
     if not os.path.exists(save_dir):
       os.makedirs(save_dir)
 
     env = gym.make(self.game_name)
-    self.state_size = env.observation_space.shape[0]
+    self.state_size = env.observation_space.shape[0]*env.observation_space.shape[1]
+    print(self.state_size)
     self.action_size = env.action_space.n
     self.opt = tf.train.AdamOptimizer(args.lr, use_locking=True)
     print(self.state_size, self.action_size)
 
     self.global_model = ActorCriticModel(self.state_size, self.action_size)  # global network
-    self.global_model(tf.convert_to_tensor(np.random.random((1, self.state_size)), dtype=tf.float32))
+    print(self.global_model(tf.convert_to_tensor(np.random.random((1, env.observation_space.shape[0],env.observation_space.shape[1])), dtype=tf.float32)))
 
   def train(self):
     if args.algorithm == 'random':
@@ -236,7 +242,7 @@ class Worker(threading.Thread):
                opt,
                result_queue,
                idx,
-               game_name='CartPole-v0',
+               game_name='coinman2-v0',
                save_dir='/tmp'):
     super(Worker, self).__init__()
     self.state_size = state_size
@@ -268,7 +274,7 @@ class Worker(threading.Thread):
             tf.convert_to_tensor(current_state[None, :],
                                  dtype=tf.float32))
         probs = tf.nn.softmax(logits)
-
+        #print(probs)
         action = np.random.choice(self.action_size, p=probs.numpy()[0])
         new_state, reward, done, _ = self.env.step(action)
         if done:
@@ -339,9 +345,14 @@ class Worker(threading.Thread):
     discounted_rewards.reverse()
 
     logits, values = self.local_model(
-        tf.convert_to_tensor(np.vstack(memory.states),
+        tf.convert_to_tensor(memory.states,
                              dtype=tf.float32))
     # Get our advantages
+    
+    #print(np.array(discounted_rewards).shape)
+    #print("tf")
+    #print(tf.convert_to_tensor(np.array(discounted_rewards)[:, None]).shape)
+    #d_rewards = np.array(discounted_rewards)[:, None]
     advantage = tf.convert_to_tensor(np.array(discounted_rewards)[:, None],
                             dtype=tf.float32) - values
     # Value loss
