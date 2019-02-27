@@ -24,9 +24,9 @@ parser.add_argument('--algorithm', default='a3c', type=str,
                     help='Choose between \'a3c\' and \'random\'.')
 parser.add_argument('--train', dest='train', action='store_true',
                     help='Train our model.')
-parser.add_argument('--lr', default=0.001,
+parser.add_argument('--lr', default=0.00025,
                     help='Learning rate for the shared optimizer.')
-parser.add_argument('--update-freq', default=20, type=int,
+parser.add_argument('--update-freq', default=500, type=int,
                     help='How often to update the global model.')
 parser.add_argument('--max-eps', default=10000, type=int,
                     help='Global maximum number of episodes to run.')
@@ -42,7 +42,8 @@ class ActorCriticModel(keras.Model):
     self.state_size = state_size
     self.action_size = action_size
     self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,8, 8))
-    self.dense1 = layers.Dense(256)
+    self.dense1 = layers.Dense(128)
+    self.dense1a = layers.Dense(64, activation='relu')
     self.activation1 = layers.Activation('relu')
     self.policy_logits = layers.Dense(action_size)
     self.dense2 = layers.Dense(256, activation='relu')
@@ -52,7 +53,7 @@ class ActorCriticModel(keras.Model):
     # Forward pass
     z= self.flatten0(inputs)
     g = self.dense1(z)
-    x = self.activation1(g)
+    x = self.dense1a(self.activation1(g))
     logits = self.policy_logits(x)
     v1 = self.dense2(z)
     values = self.values(v1)
@@ -80,14 +81,15 @@ def record(episode,
     global_ep_reward = episode_reward
   else:
     global_ep_reward = global_ep_reward * 0.99 + episode_reward * 0.01
-  print(
-      f"Episode: {episode} | "
-      f"Moving Average Reward: {int(global_ep_reward)} | "
-      f"Episode Reward: {int(episode_reward)} | "
-      f"Loss: {int(total_loss / float(num_steps) * 1000) / 1000} | "
-      f"Steps: {num_steps} | "
-      f"Worker: {worker_idx}"
-  )
+  if(episode%10==0):
+    print(
+        f"Episode: {episode} | "
+        f"Moving Average Reward: {int(global_ep_reward)} | "
+        f"Episode Reward: {int(episode_reward)} | "
+        f"Loss: {int(total_loss / float(num_steps) * 1000) / 1000} | "
+        f"Steps: {num_steps} | "
+        f"Worker: {worker_idx}"
+    )
   result_queue.put(global_ep_reward)
   return global_ep_reward
 
@@ -196,7 +198,7 @@ class MasterAgent():
 
     try:
       while not done:
-        env.render(mode='rgb_array')
+        env.render(mode='human')
         policy, value = model(tf.convert_to_tensor(state[None, :], dtype=tf.float32))
         policy = tf.nn.softmax(policy)
         action = np.argmax(policy)

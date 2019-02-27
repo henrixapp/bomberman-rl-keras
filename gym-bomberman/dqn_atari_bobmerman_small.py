@@ -36,7 +36,7 @@ class AtariProcessor(Processor):
         # We could perform this processing step in `process_observation`. In this case, however,
         # we would need to store a `float32` array instead, which is 4x more memory intensive than
         # an `uint8` array. This matters if we store 1M observations.
-        processed_batch = (batch.astype('float32')+3) / 7
+        processed_batch = (batch.astype('float32')) / 7
         return processed_batch
 
     def process_reward(self, reward):
@@ -71,9 +71,9 @@ window_length = 1
 #model.add(Flatten(input_shape=(1,) + env.observation_space.shape))
 model = Sequential([
             Flatten(input_shape=(window_length,8, 8)),
-            Dense(256),
+            Dense(64),
             Activation("relu"),
-            Dense(128),
+            Dense(32),
            
             Activation("relu"),
             Dense(4),
@@ -83,7 +83,7 @@ print(model.summary())
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
-memory = SequentialMemory(limit=15000, window_length=WINDOW_LENGTH)
+memory = SequentialMemory(limit=150000, window_length=WINDOW_LENGTH)
 processor = AtariProcessor()
 
 # Select a policy. We use eps-greedy action selection, which means that a random action is selected
@@ -101,7 +101,7 @@ policy = BoltzmannQPolicy()
 # Feel free to give it a try!
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-               processor=processor, nb_steps_warmup=50000, gamma=.99, target_model_update=10000,
+               processor=processor, nb_steps_warmup=50000, gamma=.99, target_model_update=5000,
                train_interval=4, delta_clip=1.)
 dqn.compile(Adam(lr=.00025), metrics=['mae'])
 
@@ -115,7 +115,7 @@ if args.mode == 'train':
     callbacks += [FileLogger(log_filename, interval=100)]
     callbacks +=[keras.callbacks.TensorBoard(log_dir='./Graph', histogram_freq=0,  
           write_graph=True, write_images=True)]
-    dqn.fit(env, callbacks=callbacks, nb_steps=150000, log_interval=15000,visualize=False)
+    dqn.fit(env, callbacks=callbacks, nb_steps=500000, log_interval=15000,visualize=False)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=True)
