@@ -19,7 +19,7 @@ import keras
 import keras.callbacks
 
 
-INPUT_SHAPE = (8, 8)
+INPUT_SHAPE = (4, 4)
 WINDOW_LENGTH = 1
 
 
@@ -60,17 +60,19 @@ print(input_shape)
 print(K.image_dim_ordering())
 model = Sequential()
 if K.image_dim_ordering() == 'tf':
+    pass
     # (width, height, channels)
-    model.add(Permute((2, 3, 1), input_shape=input_shape))
+   # model.add(Permute((2, 3, 1), input_shape=input_shape))
 elif K.image_dim_ordering() == 'th':
+    pass
    # (channels, width, height)
-    model.add(Permute((1, 2, 3), input_shape=input_shape))
+    #model.add(Permute((1, 2, 3), input_shape=input_shape))
 else:
     raise RuntimeError('Unknown image_dim_ordering.')
 window_length = 1
 #model.add(Flatten(input_shape=(1,) + env.observation_space.shape))
 model = Sequential([
-            Flatten(input_shape=(window_length,8, 8)),
+            Flatten(input_shape=(window_length,4, 4)),
             Dense(64),
             Activation("relu"),
             Dense(32),
@@ -121,7 +123,7 @@ if args.mode == 'train':
     dqn.save_weights(weights_filename, overwrite=True)
 
     # Finally, evaluate our algorithm for 10 episodes.
-    dqn.test(env, nb_episodes=10, visualize=False)
+    dqn.test(env, nb_episodes=10, visualize=True)
 elif args.mode == 'test':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     if args.weights:

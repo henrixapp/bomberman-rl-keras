@@ -41,7 +41,8 @@ class ActorCriticModel(keras.Model):
     super(ActorCriticModel, self).__init__()
     self.state_size = state_size
     self.action_size = action_size
-    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,8, 8))
+    print((self.state_size,self.action_size))
+    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,4,4))
     self.dense1 = layers.Dense(128)
     self.dense1a = layers.Dense(64, activation='relu')
     self.activation1 = layers.Activation('relu')
@@ -272,6 +273,7 @@ class Worker(threading.Thread):
       time_count = 0
       done = False
       while not done:
+        #print(current_state)
         logits, _ = self.local_model(
             tf.convert_to_tensor(current_state[None, :],
                                  dtype=tf.float32))

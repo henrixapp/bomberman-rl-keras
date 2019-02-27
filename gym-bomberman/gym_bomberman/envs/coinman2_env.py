@@ -13,7 +13,19 @@ LEFT=2
 RIGHT=3
 BOMB=4
 WAIT=5
-
+COIN= 2
+WALL = -1
+EXPLOSION = -3
+FREE= 0
+CRATE=1
+PLAYER=3
+#    2: Coin
+    #    -1: WALL
+    #    -2: Bomb
+    #    -3: Explosion
+    #    0 : Free
+    #    1 : Crate
+    #    3,4,5,6: player
 class Agent(object):
     def __init__(self,id, pos):
         self.x = pos[0]
@@ -86,7 +98,7 @@ class Coinman2Env(gym.Env):
         self.screen_height = 8
         self.screen_width = 8
         self.action_space = spaces.Discrete(4)# six different actions see above
-        self.observation_space = spaces.Box(low=-3, high=3, shape=(self.screen_height, self.screen_width), dtype=np.int8)
+        self.observation_space = spaces.Box(low=-3, high=3, shape=(4, 4), dtype=np.int8)
         self.seed()
         self.logger = Log()
         # Start the first game
@@ -217,7 +229,7 @@ class Coinman2Env(gym.Env):
             reward=-1
         #reward = reward + self.player.score*1000
         
-        return (self._get_obs(), reward, done, {})
+        return (self._render_4_perspective(), reward, done, {})
     def check_if_all_coins_collected(self):
         return  len([c for c in self.coins if c.collected])==len(self.coins)
     def all_players_dead(self):
@@ -233,6 +245,8 @@ class Coinman2Env(gym.Env):
     #    1 : Crate
     #    3,4,5,6: player
     def _get_obs(self):
+        return self._render_4_perspective()
+    def _get_obs2(self):
         rendered_map = np.copy(self.arena)
         # add coins
         for coin in self.coins:
@@ -248,6 +262,29 @@ class Coinman2Env(gym.Env):
         rendered_map[self.player.x,self.player.y]=3
         
         return rendered_map
+    def _render_4_perspective(self,distance=4):
+        result = np.zeros((4,distance))
+        x = self.player.x
+        y = self.player.y
+        k = 0
+        for it_x,it_y in [(-1,0),(1,0),(0,1),(0,-1)]:
+            wand = False
+            for i in range(distance):# should we be able to look over walls? --> currently not
+                if(wand):
+                    result[k,i]= WALL
+                else:
+                    if x+it_x*(i+1)==0 or 0 == y+it_y*(i+1) or x+it_x*(i+1)==7 or 7 == y+it_y*(i+1):# TODO; Wand bedingung updaten
+                        wand= True
+                        result[k,i]=WALL
+                    else:
+                        for b in self.bombs:
+                            if b.x == x+it_x*(i+1) and b.y == y+it_y*(i+1):
+                                result[k,i] = BOMB
+                        for c in self.coins:
+                            if c.x == x+it_x*(i+1) and c.y == y+it_y*(i+1) and c.collectable:
+                                result[k,i] = COIN # TODO Players
+            k = k+1
+        return result#.reshape(4*distance)
     def generate_arena(self):
         # Arena with wall and crate layout
         self.arena = np.zeros((8,8), dtype=np.int8)
@@ -275,7 +312,7 @@ class Coinman2Env(gym.Env):
                     n_crates = 0#(self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
                     while True:
                         x, y = i,j#np.random.randint(0,7), np.random.randint(0,7)
-                        if n_crates == 0 and self.arena[x,y] == 0 and np.random.randint(0,100)<80:
+                        if n_crates == 0 and self.arena[x,y] == 0 and np.random.randint(0,100)<800:
                             self.coins.append(Coin((x,y)))
                             self.coins[-1].collectable = True
                             break
@@ -300,7 +337,7 @@ class Coinman2Env(gym.Env):
     #    0 : Free
     #    1 : Crate
     #    3,4,5,6: player
-        map = self._get_obs()
+        map = self._get_obs2()
         for zeile in map:
             for element in zeile:
                 outfile.write("{}".format(["💥","\u1F9E8","❌","👣","❎","🏆","😎"][element+3]))
