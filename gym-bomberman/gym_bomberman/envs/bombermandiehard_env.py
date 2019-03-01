@@ -400,13 +400,13 @@ class BombermanDieHardEnv(gym.Env):
         map = self._get_obs2()
         for zeile in map:
             for element in zeile:
-                outfile.write("{}".format(["💥","\u1F9E8","❌","👣","❎","🏆","😎"][element+3]))
+                outfile.write("{}".format(["💥","💣","❌","👣","❎","🏆","😎"][element+3]))
             outfile.write("\n")
         view = self._get_obs()
         outfile.write("Local view:\n")
         for zeile in view:
             for element in zeile:
-                outfile.write("{}".format(["💥","\u1F9E8","❌","👣","❎","🏆","😎"][element+3]))
+                outfile.write("{}".format(["💥","💣","❌","👣","❎","🏆","😎"][element+3]))
             outfile.write("\n")
         if mode != 'human':
             with closing(outfile):

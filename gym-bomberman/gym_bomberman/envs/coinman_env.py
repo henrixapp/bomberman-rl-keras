@@ -302,7 +302,7 @@ class CoinmanEnv(gym.Env):
         map = self._get_obs()
         for zeile in map:
             for element in zeile:
-                outfile.write("{}".format(["💥","\u1F9E8","❌","👣","❎","🏆","😎"][element+3]))
+                outfile.write("{}".format(["💥","💣","❌","👣","❎","🏆","😎"][element+3]))
             outfile.write("\n")
         if mode != 'human':
             with closing(outfile):
