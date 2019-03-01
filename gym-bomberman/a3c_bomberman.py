@@ -17,7 +17,7 @@ from tensorflow.python import keras
 from tensorflow.python.keras import layers
 
 tf.enable_eager_execution()
-
+RENDER_CORNERS=False
 parser = argparse.ArgumentParser(description='Run A3C algorithm on the game '
                                              'Bomberman.')
 parser.add_argument('--algorithm', default='a3c', type=str,
@@ -26,7 +26,7 @@ parser.add_argument('--train', dest='train', action='store_true',
                     help='Train our model.')
 parser.add_argument('--lr', default=0.00025,# multiplied by 10
                     help='Learning rate for the shared optimizer.')
-parser.add_argument('--update-freq', default=50, type=int,
+parser.add_argument('--update-freq', default=500, type=int,
                     help='How often to update the global model.')
 parser.add_argument('--max-eps', default=10000, type=int,
                     help='Global maximum number of episodes to run.')
@@ -42,7 +42,7 @@ class ActorCriticModel(keras.Model):
     self.state_size = state_size
     self.action_size = action_size
     print((self.state_size,self.action_size))
-    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,5,4))# 5
+    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,4+ RENDER_CORNERS,4))# 5
     self.dense1 = layers.Dense(128)
     self.dense1a = layers.Dense(64, activation='relu')
     self.activation1 = layers.Activation('relu')

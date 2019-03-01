@@ -22,6 +22,7 @@ EXPLOSION = -3
 FREE = 0
 CRATE = 1
 PLAYER = 3
+RENDER_CORNERS = False
 
 
 class Agent(object):
@@ -116,7 +117,7 @@ class BombermanDieHardEnv(gym.Env):
         # six different actions see above
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(
-            low=-3, high=3, shape=(5, 4), dtype=np.int8)
+            low=-3, high=3, shape=(4+ RENDER_CORNERS, 4), dtype=np.int8)
         self.seed()
         self.logger = Log()
         # Start the first game
@@ -298,7 +299,7 @@ class BombermanDieHardEnv(gym.Env):
         return rendered_map
 
     def _render_4_perspective(self, distance=4):
-        result = np.zeros((5, distance),dtype=np.int8)
+        result = np.zeros((4+RENDER_CORNERS, distance),dtype=np.int8)
         x = self.player.x
         y = self.player.y
         k = 0
@@ -325,24 +326,25 @@ class BombermanDieHardEnv(gym.Env):
                                 result[k, i] = COIN  # TODO Players
             k = k+1
         k= distance
-        i =0 #adding corners
-        for it_x, it_y in [(-1, -1), (1, 1), (-1, 1), (1, -1)]:
-            # TODO; Wand bedingung updaten
-            if x+it_x < 0 or 0 > y+it_y or x+it_x > s.cols or s.rows < y+it_y:
-                wand = True
-                result[k, i] = WALL
-            elif self.arena[x+it_x,y+it_y] == WALL:
-                wand= True
-                result[k,i]= WALL
-            else:
-                result[k,i] = self.arena[x+it_x, y+it_y] # forgotten first important!
-                for b in self.bombs:
-                    if b.x == x+it_x and b.y == y+it_y:
-                        result[k,i] = BOMB
-                for c in self.coins:
-                    if c.x == x+it_x and c.y == y+it_y and c.collectable:
-                        result[k,i] = COIN
-            i = i+1
+        if RENDER_CORNERS:
+            i =0 #adding corners
+            for it_x, it_y in [(-1, -1), (1, 1), (-1, 1), (1, -1)]:
+                # TODO; Wand bedingung updaten
+                if x+it_x < 0 or 0 > y+it_y or x+it_x > s.cols or s.rows < y+it_y:
+                    wand = True
+                    result[k, i] = WALL
+                elif self.arena[x+it_x,y+it_y] == WALL:
+                    wand= True
+                    result[k,i]= WALL
+                else:
+                    result[k,i] = self.arena[x+it_x, y+it_y] # forgotten first important!
+                    for b in self.bombs:
+                        if b.x == x+it_x and b.y == y+it_y:
+                            result[k,i] = BOMB
+                    for c in self.coins:
+                        if c.x == x+it_x and c.y == y+it_y and c.collectable:
+                            result[k,i] = COIN
+                i = i+1
         return result#.reshape(4*distance)
     def generate_arena(self):
         # Arena with wall and crate layout
