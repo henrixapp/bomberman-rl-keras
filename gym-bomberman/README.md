@@ -50,8 +50,9 @@ WAIT = 5
 
 #### our observationspace:
 
+
 Output | Rendered | meaning
- :---:|:---:| --- 
+:---:|:---:|--- 
   -3 | 💥 | Explosion 
   -2 | 💣 | Bomb    
   -1 | ❌ | Wall (not destroyable) 
@@ -59,6 +60,7 @@ Output | Rendered | meaning
   1 | ❎ | Crate (destroyable) 
   2 | 🏆 | Coin  
   3 | 😎 | Player 
+
 
 ### List of aviable envs
 All enviroments are currently single player
