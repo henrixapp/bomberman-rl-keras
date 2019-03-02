@@ -18,6 +18,7 @@ from tensorflow.python.keras import layers
 
 tf.enable_eager_execution()
 RENDER_CORNERS=False
+RENDER_HISTORY = True
 parser = argparse.ArgumentParser(description='Run A3C algorithm on the game '
                                              'Bomberman.')
 parser.add_argument('--algorithm', default='a3c', type=str,
@@ -42,8 +43,8 @@ class ActorCriticModel(keras.Model):
     self.state_size = state_size
     self.action_size = action_size
     print((self.state_size,self.action_size))
-    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,4+ RENDER_CORNERS,4))# 5
-    self.dense1 = layers.Dense(128)
+    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,4+ RENDER_CORNERS+RENDER_HISTORY,4))# 5
+    self.dense1 = layers.Dense(256)
     self.dense1a = layers.Dense(64, activation='relu')
     self.activation1 = layers.Activation('relu')
     self.policy_logits = layers.Dense(action_size)

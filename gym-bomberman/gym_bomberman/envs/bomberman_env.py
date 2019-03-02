@@ -316,7 +316,7 @@ class BombermanEnv(gym.Env):
                         result[k,i] = self.arena[x+it_x*(i+1), y+it_y*(i+1)] # forgotten first important!
                         for b in self.bombs:
                             if b.x == x+it_x*(i+1) and b.y == y+it_y*(i+1):
-                                result[k, i] = BOMB
+                                result[k, i] = -2
                         for c in self.coins:
                             if c.x == x+it_x*(i+1) and c.y == y+it_y*(i+1) and c.collectable:
                                 result[k, i] = COIN  # TODO Players
@@ -335,7 +335,7 @@ class BombermanEnv(gym.Env):
                 result[k,i] = self.arena[x+it_x, y+it_y] # forgotten first important!
                 for b in self.bombs:
                     if b.x == x+it_x and b.y == y+it_y:
-                        result[k,i] = BOMB
+                        result[k,i] = -2
                 for c in self.coins:
                     if c.x == x+it_x and c.y == y+it_y and c.collectable:
                         result[k,i] = COIN

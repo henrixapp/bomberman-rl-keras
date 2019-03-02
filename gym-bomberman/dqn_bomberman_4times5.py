@@ -18,9 +18,10 @@ from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 import keras
 import keras.callbacks
 
+RENDER_CORNERS = True
+INPUT_SHAPE = (4+RENDER_CORNERS, 4)
+WINDOW_LENGTH = 4
 
-INPUT_SHAPE = (5, 4)
-WINDOW_LENGTH = 1
 
 
 class AtariProcessor(Processor):
@@ -44,7 +45,7 @@ class AtariProcessor(Processor):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
-parser.add_argument('--env-name', type=str, default='bomberman-v0')
+parser.add_argument('--env-name', type=str, default='bombermandiehard-v0')
 parser.add_argument('--weights', type=str, default=None)
 args = parser.parse_args()
 
@@ -69,10 +70,10 @@ elif K.image_dim_ordering() == 'th':
     #model.add(Permute((1, 2, 3), input_shape=input_shape))
 else:
     raise RuntimeError('Unknown image_dim_ordering.')
-window_length = 1
+window_length = 4
 #model.add(Flatten(input_shape=(1,) + env.observation_space.shape))
 model = Sequential([
-            Flatten(input_shape=(window_length,5, 4)),
+            Flatten(input_shape=(window_length,4+RENDER_CORNERS, 4)),
             Dense(64),
             Activation("relu"),
             Dense(32),
