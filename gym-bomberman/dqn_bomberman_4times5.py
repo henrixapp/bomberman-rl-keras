@@ -18,8 +18,9 @@ from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 import keras
 import keras.callbacks
 
-RENDER_CORNERS = True
-INPUT_SHAPE = (4+RENDER_CORNERS, 4)
+RENDER_CORNERS = False
+RENDER_HISTORY = True
+INPUT_SHAPE = (4+RENDER_CORNERS+RENDER_HISTORY, 4)
 WINDOW_LENGTH = 4
 
 
@@ -73,7 +74,7 @@ else:
 window_length = 4
 #model.add(Flatten(input_shape=(1,) + env.observation_space.shape))
 model = Sequential([
-            Flatten(input_shape=(window_length,4+RENDER_CORNERS, 4)),
+            Flatten(input_shape=(window_length,4+RENDER_CORNERS+RENDER_HISTORY, 4)),
             Dense(64),
             Activation("relu"),
             Dense(32),

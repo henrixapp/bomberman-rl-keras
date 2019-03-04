@@ -419,10 +419,11 @@ class BombermanDieHardEnv(gym.Env):
             outfile.write("\n")
         view = self._get_obs()
         outfile.write("Local view:\n")
-        for zeile in view:
-            for element in zeile:
-                outfile.write("{}".format(["💥","💣","❌","👣","❎","🏆","😎"][element+3]))
-            outfile.write("\n")
+        if not RENDER_HISTORY:
+            for zeile in view:
+                for element in zeile:
+                    outfile.write("{}".format(["💥","💣","❌","👣","❎","🏆","😎"][element+3]))
+                outfile.write("\n")
         outfile.write("Aviable bombs:{}\n".format(self.player.bombs_left))
         if mode != 'human':
             with closing(outfile):
