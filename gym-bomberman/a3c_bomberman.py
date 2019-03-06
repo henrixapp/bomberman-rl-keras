@@ -230,14 +230,21 @@ class MasterAgent():
       worker.start()
 
     moving_average_rewards = []  # record episode reward to plot
+    import matplotlib.pyplot as plt
     while True:
       reward = res_queue.get()
-      if reward is not None:
+      if reward != 'stop':
         moving_average_rewards.append(reward)
       else:
         break
     [w.join() for w in workers]
-
+    shared_queue_list = []
+    res_queue.put('STOP')
+    for i in iter(res_queue.get, 'STOP'):
+      shared_queue_list.append(i)
+      if i != 'stop':
+        moving_average_rewards.append(i)
+    print(moving_average_rewards)
     plt.plot(moving_average_rewards)
     plt.ylabel('Moving average ep reward')
     plt.xlabel('Step')
@@ -381,7 +388,7 @@ def run_process(
       time_count += 1
       current_state = new_state
       total_step += 1
-    result_queue.put(None)
+    result_queue.put('stop')
 
 def compute_loss(
                  done,
