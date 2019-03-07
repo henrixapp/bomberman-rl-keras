@@ -19,7 +19,7 @@ import keras
 import keras.callbacks
 
 RENDER_CORNERS = False
-RENDER_HISTORY = True
+RENDER_HISTORY = False
 INPUT_SHAPE = (4+RENDER_CORNERS+RENDER_HISTORY, 4)
 WINDOW_LENGTH = 4
 
@@ -77,7 +77,7 @@ model = Sequential([
             Flatten(input_shape=(window_length,4+RENDER_CORNERS+RENDER_HISTORY, 4)),
             Dense(64),
             Activation("relu"),
-            Dense(32),
+            Dense(64),
            
             Activation("relu"),
             Dense(6),
@@ -87,7 +87,7 @@ print(model.summary())
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
-memory = SequentialMemory(limit=150000, window_length=WINDOW_LENGTH)
+memory = SequentialMemory(limit=1000000, window_length=WINDOW_LENGTH)
 processor = AtariProcessor()
 
 # Select a policy. We use eps-greedy action selection, which means that a random action is selected
@@ -95,13 +95,13 @@ processor = AtariProcessor()
 # the agent initially explores the environment (high eps) and then gradually sticks to what it knows
 # (low eps). We also set a dedicated eps value that is used during testing. Note that we set it to 0.05
 # so that the agent still performs some random actions. This ensures that the agent cannot get stuck.
-#policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05,
- #                             nb_steps=1500000)
+policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05,
+                              nb_steps=500000)
 
 # The trade-off between exploration and exploitation is difficult and an on-going research topic.
 # If you want, you can experiment with the parameters or use a different policy. Another popular one
 # is Boltzmann-style exploration:
-policy = BoltzmannQPolicy()
+#policy = BoltzmannQPolicy()
 # Feel free to give it a try!
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
@@ -119,7 +119,7 @@ if args.mode == 'train':
     callbacks += [FileLogger(log_filename, interval=100)]
     callbacks +=[keras.callbacks.TensorBoard(log_dir='./Graph', histogram_freq=0,  
           write_graph=True, write_images=True)]
-    dqn.fit(env, callbacks=callbacks, nb_steps=500000, log_interval=15000,visualize=False)
+    dqn.fit(env, callbacks=callbacks, nb_steps=500000, log_interval=100000,visualize=False)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=True)

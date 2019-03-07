@@ -13,18 +13,19 @@ import argparse
 import matplotlib.pyplot as plt
 
 RENDER_CORNERS=False
-RENDER_HISTORY = True
+RENDER_HISTORY = False
+WINDOW_LENGTH = 4
 parser = argparse.ArgumentParser(description='Run A3C algorithm on the game '
                                              'Bomberman.')
 parser.add_argument('--algorithm', default='a3c', type=str,
                     help='Choose between \'a3c\' and \'random\'.')
 parser.add_argument('--train', dest='train', action='store_true',
                     help='Train our model.')
-parser.add_argument('--lr', default=0.00025,# multiplied by 10
+parser.add_argument('--lr', default=0.0000025,# multiplied by 10
                     help='Learning rate for the shared optimizer.')
-parser.add_argument('--update-freq', default=500, type=int,
+parser.add_argument('--update-freq', default=5000, type=int,
                     help='How often to update the global model.')
-parser.add_argument('--max-eps', default=10000, type=int,
+parser.add_argument('--max-eps', default=100000, type=int,
                     help='Global maximum number of episodes to run.')
 parser.add_argument('--gamma', default=0.99,
                     help='Discount factor of rewards.')
@@ -62,13 +63,13 @@ class ActorCriticModel(Model):
     self.state_size = state_size
     self.action_size = action_size
     print((self.state_size,self.action_size))
-    print((args.update_freq+1,4+ RENDER_CORNERS+RENDER_HISTORY,4))
-    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,4+ RENDER_CORNERS+RENDER_HISTORY,4))# 5
-    self.dense1 = layers.Dense(256)
-    self.dense1a = layers.Dense(64, activation='relu')
+    self.conv = layers.Conv2D(1,2,input_shape=(args.update_freq+1,WINDOW_LENGTH,4+ RENDER_CORNERS+RENDER_HISTORY,4))
+    self.flatten0 = layers.Flatten()# 5
+    self.dense1 = layers.Dense(1280)
+    self.dense1a = layers.Dense(256, activation='relu')
     self.activation1 = layers.Activation('relu')
     self.policy_logits = layers.Dense(action_size)
-    self.dense2 = layers.Dense(256, activation='relu')
+    self.dense2 = layers.Dense(1280, activation='relu')
     self.values = layers.Dense(1)
 
   def call(self, inputs=None):
@@ -76,7 +77,7 @@ class ActorCriticModel(Model):
     if inputs ==None:
       print("Empty Call")
       return
-    z= self.flatten0(inputs)
+    z= self.flatten0(self.conv(inputs))
     g = self.dense1(z)
     x = self.dense1a(self.activation1(g))
     logits = self.policy_logits(x)
@@ -106,17 +107,17 @@ def record(episode,
     global_ep_reward.value = episode_reward
   else:
     global_ep_reward.value = global_ep_reward.value * 0.99 + episode_reward * 0.01
-  if(episode.value%10==0):
+  if episode.value %100==0:
     print(
-        f"Episode: {episode} | "
-        f"Moving Average Reward: {int(global_ep_reward.value)} | "
-        f"Episode Reward: {int(episode_reward)} | "
-        f"Loss: {int(total_loss / float(num_steps) * 1000) / 1000} | "
-        f"Steps: {num_steps} | "
-        f"Worker: {worker_idx}"
+          f"Episode: {episode.value} | "
+          f"Moving Average Reward: {int(global_ep_reward.value)} | "
+          f"Episode Reward: {int(episode_reward)} | "
+          f"Loss: {int(total_loss / float(num_steps) * 1000) / 1000} | "
+          f"Steps: {num_steps} | "
+          f"Worker: {worker_idx}"
     )
   result_queue.put(global_ep_reward.value)
-  return global_ep_reward
+  return global_ep_reward.value
 
 class ActorCriticModelHolder(object):
   def __init__(self):
@@ -133,6 +134,10 @@ class ActorCriticModelHolder(object):
     return self.model.get_weights()
   def save_weights(self, filename):
     return self.model.save_weights(filename)
+  def load_weights(self, filename):
+    return self.model.load_weights(filename)
+  def summary(self):
+    return self.model.summary()
 
 class RandomAgent:
   """Random Agent that will play the specified game
@@ -160,7 +165,7 @@ class RandomAgent:
         steps += 1
         reward_sum += reward
       # Record statistics
-      self.global_moving_average_reward = record(episode,
+      record(episode,
                                                  reward_sum,
                                                  0,
                                                  self.global_moving_average_reward,
@@ -202,10 +207,14 @@ class MasterAgent():
     self.manager = BaseManager()
     self.manager.start()
     self.global_model = self.manager.ActorCriticModelHolder()
+    
     self.global_model.initialize(self.state_size, self.action_size) # global network
     print("After creation")
     print(self.global_model,flush=True)
-    print(self.global_model.call(tf.convert_to_tensor(np.random.random((1, env.observation_space.shape[0],env.observation_space.shape[1])), dtype=tf.float32)))
+    initial= generate_state(env.reset(),WINDOW_LENGTH)
+    print(("initial.shape",initial.shape))
+    print(self.global_model.call(tf.convert_to_tensor([initial],dtype=tf.float32)))
+    #print(self.global_model.call(tf.convert_to_tensor(np.random.random((1,WINDOW_LENGTH+1, env.observation_space.shape[0],env.observation_space.shape[1])), dtype=tf.float32)))
 
   def train(self):
     if args.algorithm == 'random':
@@ -238,6 +247,7 @@ class MasterAgent():
       else:
         break
     [w.join() for w in workers]
+    print("DONE JOINING")
     shared_queue_list = []
     res_queue.put('STOP')
     for i in iter(res_queue.get, 'STOP'):
@@ -254,7 +264,7 @@ class MasterAgent():
 
   def play(self):
     env = gym.make(self.game_name).unwrapped
-    state = env.reset()
+    state = generate_state(env.reset(),WINDOW_LENGTH)
     model = self.global_model
     model_path = os.path.join(self.save_dir, 'model_{}.h5'.format(self.game_name))
     print('Loading model from: {}'.format(model_path))
@@ -266,10 +276,11 @@ class MasterAgent():
     try:
       while not done:
         env.render(mode='human')
-        policy, value = model(tf.convert_to_tensor(state[None, :], dtype=tf.float32))
+        policy, value = model.call(tf.convert_to_tensor(state[None, :], dtype=tf.float32))
         policy = tf.nn.softmax(policy)
         action = np.argmax(policy)
-        state, reward, done, _ = env.step(action)
+        nstate, reward, done, _ = env.step(action)
+        state = push_state(nstate,state)
         reward_sum += reward
         print("{}. Reward: {}, action: {}".format(step_counter, reward_sum, action))
         step_counter += 1
@@ -294,8 +305,12 @@ class Memory:
     self.states = []
     self.actions = []
     self.rewards = []
-
-
+# Pushs  state into current_state
+#
+def push_state(state,current_state):
+  return np.append(current_state[0:(current_state.shape[0]-1)],[state], axis=0)
+def generate_state(state,length):
+  return np.append([state],[state for i in range(length)], axis=0)
 def run_process(
                state_size,
                action_size,
@@ -324,7 +339,7 @@ def run_process(
   tf.enable_eager_execution()
   K.set_session(tf.Session())
   while global_episode.value < args.max_eps:
-    current_state = env.reset()
+    current_state = generate_state(env.reset(),WINDOW_LENGTH)
     mem.clear()
     ep_reward = 0.
     ep_steps = 0
@@ -341,6 +356,7 @@ def run_process(
       #print(probs)
       action = np.random.choice(action_size, p=probs.numpy()[0])
       new_state, reward, done, _ = env.step(action)
+      new_state = push_state(new_state,current_state)
       if done:
         reward = -1
       ep_reward += reward
@@ -368,7 +384,7 @@ def run_process(
         time_count = 0
 
         if done:  # done and print information
-          global_moving_average_reward = \
+          global_moving_average_reward.value = \
             record(global_episode, ep_reward, worker_idx,
                    global_moving_average_reward, result_queue,
                    ep_loss, ep_steps)
@@ -388,7 +404,9 @@ def run_process(
       time_count += 1
       current_state = new_state
       total_step += 1
-    result_queue.put('stop')
+  print("Stopped {}".format(worker_idx))
+  result_queue.put('stop')
+  return 0
 
 def compute_loss(
                  done,

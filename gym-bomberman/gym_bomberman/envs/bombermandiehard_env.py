@@ -23,7 +23,7 @@ FREE = 0
 CRATE = 1
 PLAYER = 3
 RENDER_CORNERS = False
-RENDER_HISTORY = True
+RENDER_HISTORY = False
 
 
 class Agent(object):
@@ -137,7 +137,7 @@ class BombermanDieHardEnv(gym.Env):
         return is_free
 
     def step(self, action):
-        reward = 2  # 0 # TODO coins collected as reward
+        reward = 0 # 0 # TODO coins collected as reward
         assert self.action_space.contains(action)
         if action == UP and self.tile_is_free(self.player.x, self.player.y - 1):
             self.player.y -= 1
@@ -157,12 +157,12 @@ class BombermanDieHardEnv(gym.Env):
             self.bombs.append(self.player.make_bomb())
             self.player.bombs_left -= 1
             self.player.events.append(e.BOMB_DROPPED)
-            reward = 5
+            reward = 2
         elif action == WAIT:
             self.player.events.append(e.WAITED)
-            reward = -2
+            #reward = -2
         else:
-            reward = -5
+            reward = 0
         # collect coins
         for coin in self.coins:
             if coin.collectable and not coin.collected:
@@ -180,6 +180,7 @@ class BombermanDieHardEnv(gym.Env):
         # simulate bombs and explosion
         # bombs
         for bomb in self.bombs:
+            #reward *= -2
             # Explode when timer is finished
             if bomb.timer <= 0:
                 self.logger.info(
@@ -195,6 +196,7 @@ class BombermanDieHardEnv(gym.Env):
                             if (c.x, c.y) == (x, y):
                                 c.collectable = True
                                 self.logger.info(f'Coin found at {(x,y)}')
+                                reward += 20
                                 #bomb.owner.events.append(e.COIN_FOUND)
                 # Create explosion
                 self.explosions.append(Explosion(blast_coords, bomb.owner))
@@ -239,8 +241,8 @@ class BombermanDieHardEnv(gym.Env):
             explosion.timer -= 1
         a = self.player
         if a in agents_hit:
-            #a.alive = False
-            reward = 0 #don't try to kill your self (disabled)
+            a.alive = False
+            reward = -500 #don't try to kill your self (disabled)
         #    self.active_agents.remove(a)
         #    a.events.append(e.GOT_KILLED)
         #    for aa in self.active_agents:
@@ -252,12 +254,12 @@ class BombermanDieHardEnv(gym.Env):
         self.round = self.round+1
         done = self.check_if_all_coins_collected(
         ) or self.all_players_dead() or self.round > 200
-        #if detonation:
-        #    reward= 10
+        if detonation:
+            reward= 200# TODO: Increasing with number
         if self.round > 200:
             reward = -1
         if not self.player.alive:
-            reward = -1
+            reward = -500
         # reward = reward + self.player.score*10
 
         return (self._get_obs(), reward, done, {})
