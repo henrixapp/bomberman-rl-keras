@@ -137,7 +137,7 @@ class BombermanDieHardEnv(gym.Env):
         return is_free
 
     def step(self, action):
-        reward = 0 # 0 # TODO coins collected as reward
+        reward = -1 # 0 # TODO coins collected as reward
         assert self.action_space.contains(action)
         if action == UP and self.tile_is_free(self.player.x, self.player.y - 1):
             self.player.y -= 1
@@ -302,7 +302,7 @@ class BombermanDieHardEnv(gym.Env):
 
         return rendered_map
 
-    def _render_4_perspective(self, distance=4):
+    def _render_4_perspective(self, distance=5):# added own field
         result = np.zeros((4+RENDER_CORNERS+ RENDER_HISTORY, distance),dtype=np.int8)
         x = self.player.x
         y = self.player.y
@@ -314,22 +314,22 @@ class BombermanDieHardEnv(gym.Env):
                     result[k, i] = WALL
                 else:
                     # TODO; Wand bedingung updaten
-                    if x+it_x*(i+1) < 0 or 0 > y+it_y*(i+1) or x+it_x*(i+1) > s.cols or s.rows < y+it_y*(i+1):
+                    if x+it_x*(i) < 0 or 0 > y+it_y*(i) or x+it_x*(i) > s.cols or s.rows < y+it_y*(i):
                         wand = True
                         result[k, i] = WALL
-                    elif self.arena[x+it_x*(i+1), y+it_y*(i+1)] == WALL:
+                    elif self.arena[x+it_x*(i), y+it_y*(i)] == WALL:
                         wand = True
                         result[k, i] = WALL
                     else:
-                        result[k,i] = self.arena[x+it_x*(i+1), y+it_y*(i+1)] # forgotten first important!
+                        result[k,i] = self.arena[x+it_x*(i), y+it_y*(i)] # forgotten first important!
                         for b in self.bombs:
-                            if b.x == x+it_x*(i+1) and b.y == y+it_y*(i+1):
+                            if b.x == x+it_x*(i) and b.y == y+it_y*(i):
                                 result[k, i] = -2
                         for c in self.coins:
-                            if c.x == x+it_x*(i+1) and c.y == y+it_y*(i+1) and c.collectable:
+                            if c.x == x+it_x*(i) and c.y == y+it_y*(i) and c.collectable:
                                 result[k, i] = COIN  # TODO Players, Explosions
                         for e in self.explosions:
-                            if (x+it_x*(i+1), y+it_y*(i+1)) in e.blast_coords:
+                            if (x+it_x*(i), y+it_y*(i)) in e.blast_coords:
                                 result[k,i] = EXPLOSION
             k = k+1
         k= distance
@@ -362,6 +362,8 @@ class BombermanDieHardEnv(gym.Env):
                     result[k,i]=-1
                 else:
                     result[k,i]=self.player.events[len(self.player.events)-i-1]
+        #store bomb count
+        result[0,0] = np.int8(self.player.bombs_left)
         return result#.reshape(4*distance)
     def generate_arena(self):
         # Arena with wall and crate layout s.crate_density

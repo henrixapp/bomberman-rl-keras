@@ -14,16 +14,16 @@ import matplotlib.pyplot as plt
 
 RENDER_CORNERS=False
 RENDER_HISTORY = False
-WINDOW_LENGTH = 4
+WINDOW_LENGTH = 0
 parser = argparse.ArgumentParser(description='Run A3C algorithm on the game '
                                              'Bomberman.')
 parser.add_argument('--algorithm', default='a3c', type=str,
                     help='Choose between \'a3c\' and \'random\'.')
 parser.add_argument('--train', dest='train', action='store_true',
                     help='Train our model.')
-parser.add_argument('--lr', default=0.0000025,# multiplied by 10
+parser.add_argument('--lr', default=0.0025,# multiplied by 10
                     help='Learning rate for the shared optimizer.')
-parser.add_argument('--update-freq', default=5000, type=int,
+parser.add_argument('--update-freq', default=500, type=int,
                     help='How often to update the global model.')
 parser.add_argument('--max-eps', default=100000, type=int,
                     help='Global maximum number of episodes to run.')
@@ -63,13 +63,13 @@ class ActorCriticModel(Model):
     self.state_size = state_size
     self.action_size = action_size
     print((self.state_size,self.action_size))
-    self.conv = layers.Conv2D(1,2,input_shape=(args.update_freq+1,WINDOW_LENGTH,4+ RENDER_CORNERS+RENDER_HISTORY,4))
-    self.flatten0 = layers.Flatten()# 5
-    self.dense1 = layers.Dense(1280)
-    self.dense1a = layers.Dense(256, activation='relu')
+    #self.conv = layers.Conv2D(1,2,input_shape=(args.update_freq+1,WINDOW_LENGTH,4+ RENDER_CORNERS+RENDER_HISTORY,5))
+    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,WINDOW_LENGTH,4+ RENDER_CORNERS+RENDER_HISTORY,5))# 5
+    self.dense1 = layers.Dense(128)
+    self.dense1a = layers.Dense(64, activation='relu')
     self.activation1 = layers.Activation('relu')
     self.policy_logits = layers.Dense(action_size)
-    self.dense2 = layers.Dense(1280, activation='relu')
+    self.dense2 = layers.Dense(256, activation='relu')
     self.values = layers.Dense(1)
 
   def call(self, inputs=None):
@@ -77,7 +77,7 @@ class ActorCriticModel(Model):
     if inputs ==None:
       print("Empty Call")
       return
-    z= self.flatten0(self.conv(inputs))
+    z= self.flatten0(inputs)#self.conv(inputs))
     g = self.dense1(z)
     x = self.dense1a(self.activation1(g))
     logits = self.policy_logits(x)
@@ -307,9 +307,13 @@ class Memory:
     self.rewards = []
 # Pushs  state into current_state
 #
-def push_state(state,current_state):
+def push_state(state,current_state,length= WINDOW_LENGTH):
+  if length==0:
+    return state
   return np.append(current_state[0:(current_state.shape[0]-1)],[state], axis=0)
 def generate_state(state,length):
+  if length==0:
+    return state
   return np.append([state],[state for i in range(length)], axis=0)
 def run_process(
                state_size,
