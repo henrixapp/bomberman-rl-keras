@@ -120,7 +120,7 @@ class BombermanDieHardEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=-3, high=3, shape=(4+ RENDER_CORNERS+ RENDER_HISTORY, 4), dtype=np.int8)
         self.seed()
-        self.logger = Log()
+        #self.logger = Log()
         # Start the first game
         self.reset()
         self.env = self
@@ -152,8 +152,8 @@ class BombermanDieHardEnv(gym.Env):
             self.player.x += 1
             self.player.events.append(e.MOVED_RIGHT)
         elif action == BOMB and self.player.bombs_left > 0:
-            self.logger.info(
-                f'player <{self.player.id}> drops bomb at {(self.player.x, self.player.y)}')
+            #self.logger.info(
+            #    f'player <{self.player.id}> drops bomb at {(self.player.x, self.player.y)}')
             self.bombs.append(self.player.make_bomb())
             self.player.bombs_left -= 1
             self.player.events.append(e.BOMB_DROPPED)
@@ -171,8 +171,8 @@ class BombermanDieHardEnv(gym.Env):
                 if a.x == coin.x and a.y == coin.y:
                     coin.collectable = False
                     coin.collected = True
-                    self.logger.info(
-                        f'Agent <{a.id}> picked up coin at {(a.x, a.y)} and receives 1 point')
+                    #self.logger.info(
+                    #   f'Agent <{a.id}> picked up coin at {(a.x, a.y)} and receives 1 point')
                     a.update_score(s.reward_coin)
                     #a.events.append(e.COIN_COLLECTED)
                     reward = 100# Reward higher
@@ -183,8 +183,8 @@ class BombermanDieHardEnv(gym.Env):
             #reward *= -2
             # Explode when timer is finished
             if bomb.timer <= 0:
-                self.logger.info(
-                    f'Agent <{bomb.owner.id}>\'s bomb at {(bomb.x, bomb.y)} explodes')
+                #self.logger.info(
+                #    f'Agent <{bomb.owner.id}>\'s bomb at {(bomb.x, bomb.y)} explodes')
                 blast_coords = bomb.get_blast_coords(self.arena)
                 # Clear crates
                 for (x, y) in blast_coords:
@@ -195,7 +195,7 @@ class BombermanDieHardEnv(gym.Env):
                         for c in self.coins:  # possible bug in GAME engine?==> relive coin
                             if (c.x, c.y) == (x, y):
                                 c.collectable = True
-                                self.logger.info(f'Coin found at {(x,y)}')
+                                #self.logger.info(f'Coin found at {(x,y)}')
                                 reward += 20
                                 #bomb.owner.events.append(e.COIN_FOUND)
                 # Create explosion
@@ -223,15 +223,16 @@ class BombermanDieHardEnv(gym.Env):
                         agents_hit.add(a)
                         # Note who killed whom, adjust scores
                         if a is explosion.owner:
-                            self.logger.info(
-                                f'Agent <{a.id}> blown up by own bomb')
+                            pass
+                            #self.logger.info(
+                            #    f'Agent <{a.id}> blown up by own bomb')
                             #a.events.append(e.KILLED_SELF)
                             # explosion.owner.trophies.append(Agent.suicide_trophy)
                         else:
-                            self.logger.info(
-                                f'Agent <{a.id}> blown up by agent <{explosion.owner.id}>\'s bomb')
-                            self.logger.info(
-                                f'Agent <{explosion.owner.name}> receives 1 point')
+                            #self.logger.info(
+                             #   f'Agent <{a.id}> blown up by agent <{explosion.owner.id}>\'s bomb')
+                            #self.logger.info(
+                            #    f'Agent <{explosion.owner.name}> receives 1 point')
                             explosion.owner.update_score(s.reward_kill)
                             #explosion.owner.events.append(e.KILLED_OPPONENT)
             # Show smoke for a little longer
@@ -379,6 +380,11 @@ class BombermanDieHardEnv(gym.Env):
                     self.arena[x,y] = -1
                 elif self.arena[x,y]==CRATE:
                     self.coins.append(Coin((x,y)))# Adding coins every where
+        self.arena[5,5]=0
+        self.arena[5,4]=0
+        self.arena[4,5]=0
+        self.arena[5,6]=0
+        self.arena[6,5]=0
         # Starting positions
         self.start_positions = [(1,1), (1,s.rows-2), (s.cols-2,1), (s.cols-2,s.rows-2)]
         np.random.shuffle(self.start_positions)
@@ -403,7 +409,8 @@ class BombermanDieHardEnv(gym.Env):
     def reset(self):
         self.round =0
         self.generate_arena()
-        self.player = Agent(1,[np.random.choice([1,15]),np.random.choice([1,15])])# TODO: Remove hard coded position selection
+        corner_pos = [np.random.choice([1,15]),np.random.choice([1,15])]
+        self.player = Agent(1,[corner_pos,[5,5]][np.random.choice(2)])# TODO: Remove hard coded position selection
         self.bombs = []
         self.explosions =[]
         return self._get_obs()
