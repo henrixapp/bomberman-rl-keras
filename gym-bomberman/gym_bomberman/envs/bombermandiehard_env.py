@@ -175,7 +175,7 @@ class BombermanDieHardEnv(gym.Env):
                     #   f'Agent <{a.id}> picked up coin at {(a.x, a.y)} and receives 1 point')
                     a.update_score(s.reward_coin)
                     #a.events.append(e.COIN_COLLECTED)
-                    reward = 100# Reward higher
+                    reward = 200# Reward higher
                     # a.trophies.append(Agent.coin_trophy)
         # simulate bombs and explosion
         # bombs
@@ -255,8 +255,7 @@ class BombermanDieHardEnv(gym.Env):
         self.round = self.round+1
         done = self.check_if_all_coins_collected(
         ) or self.all_players_dead() or self.round > 200
-        if detonation:
-            reward= 200# TODO: Increasing with number
+        #no extra detenation reward
         if self.round > 200:
             reward = -1
         if not self.player.alive:
@@ -368,7 +367,7 @@ class BombermanDieHardEnv(gym.Env):
         return result#.reshape(4*distance)
     def generate_arena(self):
         # Arena with wall and crate layout s.crate_density
-        self.arena = (np.random.rand(s.cols, s.rows) < 10).astype(np.int8)
+        self.arena = (np.random.rand(s.cols, s.rows) < s.crate_density).astype(np.int8)
         self.arena[:1, :] = -1
         self.arena[-1:,:] = -1
         self.arena[:, :1] = -1
