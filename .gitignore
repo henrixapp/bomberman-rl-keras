@@ -108,3 +108,6 @@ venv.bak/
 screenshots/*.png
 screenshots/*.mp4
 screenshots/*.webm
+
+#VS Code env settings
+.vscode/

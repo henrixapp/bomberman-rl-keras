@@ -42,7 +42,7 @@ class ActorCriticModel(keras.Model):
     self.state_size = state_size
     self.action_size = action_size
     print((self.state_size,self.action_size))
-    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,4,4))
+    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,5,5))
     self.dense1 = layers.Dense(128)
     self.dense1a = layers.Dense(64, activation='relu')
     self.activation1 = layers.Activation('relu')
@@ -149,6 +149,7 @@ class MasterAgent():
     print(self.state_size, self.action_size)
 
     self.global_model = ActorCriticModel(self.state_size, self.action_size)  # global network
+    print(env.observation_space.shape[0],env.observation_space.shape[1])
     print(self.global_model(tf.convert_to_tensor(np.random.random((1, env.observation_space.shape[0],env.observation_space.shape[1])), dtype=tf.float32)))
 
   def train(self):

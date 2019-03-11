@@ -98,7 +98,7 @@ class Coinman2Env(gym.Env):
         self.screen_height = 8
         self.screen_width = 8
         self.action_space = spaces.Discrete(4)# six different actions see above
-        self.observation_space = spaces.Box(low=-3, high=3, shape=(4, 4), dtype=np.int8)
+        self.observation_space = spaces.Box(low=-3, high=3, shape=(5, 5), dtype=np.int8)
         self.seed()
         self.logger = Log()
         # Start the first game
@@ -115,7 +115,7 @@ class Coinman2Env(gym.Env):
         return is_free
     def step(self, action):
         reward = -1 #0 # TODO coins collected as reward
-        assert self.action_space.contains(action)
+        #assert self.action_space.contains(action)
         #print(action)
         if action == UP and self.tile_is_free(self.player.x, self.player.y - 1):
             self.player.y -= 1
@@ -229,7 +229,7 @@ class Coinman2Env(gym.Env):
             reward=-1
         #reward = reward + self.player.score*1000
         
-        return (self._render_4_perspective(), reward, done, {})
+        return (self._get_obs(), reward, done, {})
     def check_if_all_coins_collected(self):
         return  len([c for c in self.coins if c.collected])==len(self.coins)
     def all_players_dead(self):
@@ -245,7 +245,8 @@ class Coinman2Env(gym.Env):
     #    1 : Crate
     #    3,4,5,6: player
     def _get_obs(self):
-        return self._render_4_perspective()
+        #return self._render_4_perspective()
+        return self._render_5x5_matrix()
     def _get_obs2(self):
         rendered_map = np.copy(self.arena)
         # add coins
@@ -288,6 +289,55 @@ class Coinman2Env(gym.Env):
                                 result[k,i] = COIN # TODO Players
             k = k+1
         return result#.reshape(4*distance)
+
+    def _render_5x5_matrix(self):
+        result = np.zeros((5,5))
+        x = self.player.x
+        y = self.player.y
+        k = 0
+        for it_x,it_y in [(-1,0),(1,0),(0,1),(0,-1)]:
+            wand = False
+            for i in range(4):# should we be able to look over walls? --> currently not
+                if(wand):
+                    result[k,i+1]= WALL
+                else:
+                    if x+it_x*(i+1)<0 or 0 >y+it_y*(i+1) or x+it_x*(i+1)>7 or 7 < y+it_y*(i+1):# TODO; Wand bedingung updaten
+                        wand= True
+                        result[k,i+1]=WALL
+                    elif self.arena[x+it_x*(i+1),y+it_y*(i+1)] == WALL:
+                        wand= True
+                        result[k,i+1]= WALL
+                    else:
+                        for b in self.bombs:
+                            if b.x == x+it_x*(i+1) and b.y == y+it_y*(i+1):
+                                result[k,i+1] = BOMB
+                        for c in self.coins:
+                            if c.x == x+it_x*(i+1) and c.y == y+it_y*(i+1) and c.collectable:
+                                result[k,i+1] = COIN # TODO Players
+            k = k+1
+        
+        #bomb positions, no bomb is set to 127
+        result[0:4,0] = 127
+        result[4,1:5] = 127
+        for i, bomb in enumerate(self.bombs):
+            if i == 0:
+                result[0,0] = bomb.x
+                result[1,0] = bomb.y
+            elif i == 1:
+                result[2,0] = bomb.x
+                result[3,0] = bomb.y
+            elif i == 2:
+                result[4,1] = bomb.x
+                result[4,2] = bomb.y
+            elif i == 3:
+                result[4,3] = bomb.x
+                result[4,4] = bomb.y
+        
+        #current position
+        result[4,0] = self.arena[self.player.x, self.player.y]
+        
+        return result
+
     def generate_arena(self):
         # Arena with wall and crate layout
         self.arena = np.zeros((8,8), dtype=np.int8)
@@ -349,17 +399,6 @@ class Coinman2Env(gym.Env):
             with closing(outfile):
                 return outfile.getvalue()
 if __name__ == "__main__":
-    benv = BombermanEnv(s)
+    benv = Coinman2Env(s)
     benv.step(RIGHT)
-    benv.step(BOMB)
-    benv.render()
-    benv.step(LEFT)
-    benv.render()
-    benv.step(WAIT)
-    benv.render()
-    benv.step(WAIT)
-    benv.render()
-    benv.step(WAIT)
-    benv.render()
-    benv.step(WAIT)
-    benv.render()
+    benv.render('human')
