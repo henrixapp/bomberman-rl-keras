@@ -231,7 +231,7 @@ class Coinman2Env(gym.Env):
         
         return (self._get_obs(), reward, done, {})
     def check_if_all_coins_collected(self):
-        return  len([c for c in self.coins if c.collected])==len(self.coins)
+        return len([c for c in self.coins if c.collected])==len(self.coins)
     def all_players_dead(self):
         return not self.player.alive
         #return length([a for a in self.players if a])
@@ -317,8 +317,8 @@ class Coinman2Env(gym.Env):
             k = k+1
         
         #bomb positions, no bomb is set to 127
-        result[0:4,0] = 127
-        result[4,1:5] = 127
+        result[0:4,0] = 0
+        result[4,1:5] = 0
         for i, bomb in enumerate(self.bombs):
             if i == 0:
                 result[0,0] = bomb.x
@@ -345,11 +345,12 @@ class Coinman2Env(gym.Env):
         self.arena[-1:,:] = -1
         self.arena[:, :1] = -1
         self.arena[:,-1:] = -1
+        #crates
         for x in range(8):
             for y in range(8):
                 if (x+1)*(y+1) % 2 == 1:
                     pass
-                    self.arena[x,y] = -1
+                    #self.arena[x,y] = -1
         # Starting positions
         self.start_positions = [(1,1), (1,8-2), (8-2,1), (8-2,8-2)]
         np.random.shuffle(self.start_positions)
@@ -364,7 +365,7 @@ class Coinman2Env(gym.Env):
                 for j in range(8):
                     n_crates = 0#(self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
                     while True:
-                        x, y = i,j#np.random.randint(0,7), np.random.randint(0,7)
+                        x, y = np.random.randint(0,7), np.random.randint(0,7) #i,j
                         if n_crates == 0 and self.arena[x,y] == 0 and np.random.randint(0,100)<30:
                             self.coins.append(Coin((x,y)))
                             self.coins[-1].collectable = True
