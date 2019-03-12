@@ -25,7 +25,7 @@ parser.add_argument('--lr', default=0.0025,# multiplied by 10
                     help='Learning rate for the shared optimizer.')
 parser.add_argument('--update-freq', default=500, type=int,
                     help='How often to update the global model.')
-parser.add_argument('--max-eps', default=100000, type=int,
+parser.add_argument('--max-eps', default=10000, type=int,
                     help='Global maximum number of episodes to run.')
 parser.add_argument('--gamma', default=0.99,
                     help='Discount factor of rewards.')
@@ -44,7 +44,7 @@ class ActorCriticModel(Model):
     self.state_size = 0
     self.action_size = 0
     print((self.state_size,self.action_size))
-    print((args.update_freq+1,4+ RENDER_CORNERS+RENDER_HISTORY,4))
+    print((args.update_freq+1,5+ RENDER_CORNERS+RENDER_HISTORY,5))
     self.flatten0 = None
     self.dense1 = None
     self.dense1a = None
@@ -64,7 +64,7 @@ class ActorCriticModel(Model):
     self.action_size = action_size
     print((self.state_size,self.action_size))
     #self.conv = layers.Conv2D(1,2,input_shape=(args.update_freq+1,WINDOW_LENGTH,4+ RENDER_CORNERS+RENDER_HISTORY,5))
-    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,WINDOW_LENGTH,4+ RENDER_CORNERS+RENDER_HISTORY,5))# 5
+    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,WINDOW_LENGTH,5+ RENDER_CORNERS+RENDER_HISTORY,5))# 5
     self.dense1 = layers.Dense(128)
     self.dense1a = layers.Dense(64, activation='relu')
     self.activation1 = layers.Activation('relu')
@@ -232,7 +232,7 @@ class MasterAgent():
                       self.opt, res_queue,
                       i,save_lock,high_score, global_episode,global_moving_average_reward,
                       self.game_name,
-                      self.save_dir)) for i in range(multiprocessing.cpu_count())]
+                      self.save_dir)) for i in range(16)]
 
     for i, worker in enumerate(workers):
       print("Starting worker {}".format(i))

@@ -118,7 +118,7 @@ class BombermanDieHardEnv(gym.Env):
         # six different actions see above
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(
-            low=-3, high=3, shape=(4+ RENDER_CORNERS+ RENDER_HISTORY, 4), dtype=np.int8)
+            low=-3, high=3, shape=(5+ RENDER_CORNERS+ RENDER_HISTORY, 5), dtype=np.int8)
         self.seed()
         #self.logger = Log()
         # Start the first game
@@ -281,7 +281,8 @@ class BombermanDieHardEnv(gym.Env):
     #    3,4,5,6: player
 
     def _get_obs(self):
-        return self._render_4_perspective()
+        #return self._render_4_perspective()
+        return self._render_5x5_matrix()
 
     def _get_obs2(self):
         rendered_map = np.copy(self.arena)
@@ -365,6 +366,58 @@ class BombermanDieHardEnv(gym.Env):
         #store bomb count
         result[0,0] = np.int8(self.player.bombs_left)
         return result#.reshape(4*distance)
+
+    def _render_5x5_matrix(self):
+        result = np.zeros((5,5))
+        x = self.player.x
+        y = self.player.y
+        k = 0
+        for it_x,it_y in [(-1,0),(1,0),(0,1),(0,-1)]:
+            wand = False
+            for i in range(4):# should we be able to look over walls? --> currently not
+                if(wand):
+                    result[k,i+1]= WALL
+                else:
+                    if x+it_x*(i+1)<0 or 0 >y+it_y*(i+1) or x+it_x*(i+1)>7 or 7 < y+it_y*(i+1):# TODO; Wand bedingung updaten
+                        wand= True
+                        result[k,i+1]=WALL
+                    elif self.arena[x+it_x*(i+1),y+it_y*(i+1)] == WALL:
+                        wand= True
+                        result[k,i+1]= WALL
+                    else:
+                        for b in self.bombs:
+                            if b.x == x+it_x*(i+1) and b.y == y+it_y*(i+1):
+                                result[k,i+1] = BOMB
+                        for c in self.coins:
+                            if c.x == x+it_x*(i+1) and c.y == y+it_y*(i+1) and c.collectable:
+                                result[k,i+1] = COIN # TODO Players
+            k = k+1
+        
+        #bomb positions, no bomb is set to 127
+        result[0:4,0] = 0
+        result[4,1:5] = 0
+        for i, bomb in enumerate(self.bombs):
+            bombx = bomb.x - self.player.x
+            bomby = bomb.y - self.player.y
+
+            if i == 0:
+                result[0,0] = bombx
+                result[1,0] = bomby
+            elif i == 1:
+                result[2,0] = bombx
+                result[3,0] = bomby
+            elif i == 2:
+                result[4,1] = bombx
+                result[4,2] = bomby
+            elif i == 3:
+                result[4,3] = bombx
+                result[4,4] = bomby
+        
+        #current position
+        result[4,0] = self.arena[self.player.x, self.player.y]
+        
+        return result
+    
     def generate_arena(self):
         # Arena with wall and crate layout s.crate_density
         self.arena = (np.random.rand(s.cols, s.rows) < s.crate_density).astype(np.int8)
@@ -428,12 +481,13 @@ class BombermanDieHardEnv(gym.Env):
                 outfile.write("{}".format(["💥","💣","❌","👣","❎","🏆","😎"][element+3]))
             outfile.write("\n")
         view = self._get_obs()
-        outfile.write("Local view:\n")
+        '''outfile.write("Local view:\n")
         if not RENDER_HISTORY:
             for zeile in view:
                 for element in zeile:
                     outfile.write("{}".format(["💥","💣","❌","👣","❎","🏆","😎"][element+3]))
                 outfile.write("\n")
+        '''
         outfile.write("Aviable bombs:{}\n".format(self.player.bombs_left))
         if mode != 'human':
             with closing(outfile):
