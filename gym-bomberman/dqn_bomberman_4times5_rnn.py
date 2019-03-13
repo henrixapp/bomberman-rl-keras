@@ -80,7 +80,7 @@ if tf.test.is_gpu_available():
 else:
   import functools
   rnn = functools.partial(
-    tf.keras.layers.GRU, recurrent_activation='sigmoid')
+    GRU, recurrent_activation='sigmoid')
 
 
 
@@ -126,7 +126,7 @@ dqn.compile(Adam(lr=.00025), metrics=['mae'])
 if args.mode == 'train':
     # Okay, now it's time to learn something! We capture the interrupt exception so that training
     # can be prematurely aborted. Notice that now you can use the built-in Keras callbacks!
-    weights_filename = 'dqn_{}without_det12m_weights.h5f'.format(args.env_name)
+    weights_filename = 'dqn_{}_rnn_5m_weights.h5f'.format(args.env_name)
     checkpoint_weights_filename = 'dqn_' + args.env_name + 'without_det12m_weights_{step}.h5f'
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
@@ -141,7 +141,7 @@ if args.mode == 'train':
     # Finally, evaluate our algorithm for 10 episodes.
     dqn.test(env, nb_episodes=10, visualize=True)
 elif args.mode == 'test':
-    weights_filename = 'dqn_{}without_det12m_weights.h5f'.format(args.env_name)
+    weights_filename = 'dqn_{}_rnn_5m_weights.h5f'.format(args.env_name)
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
