@@ -19,6 +19,7 @@ from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 import keras
 import keras.callbacks
 
+import tensorflow as tf
 RENDER_CORNERS = False
 RENDER_HISTORY = False
 INPUT_SHAPE = (5+RENDER_CORNERS+RENDER_HISTORY, 5)
@@ -74,7 +75,14 @@ else:
     raise RuntimeError('Unknown image_dim_ordering.')
 window_length = 4
 #model.add(Flatten(input_shape=(1,) + env.observation_space.shape))
-rnn = functools.partial(keras.layers.GRU, recurrent_activation='sigmoid')
+if tf.test.is_gpu_available():
+  rnn = keras.layers.CuDNNGRU
+else:
+  import functools
+  rnn = functools.partial(
+    tf.keras.layers.GRU, recurrent_activation='sigmoid')
+
+
 
 
 model = Sequential([
@@ -102,7 +110,7 @@ processor = AtariProcessor()
 # (low eps). We also set a dedicated eps value that is used during testing. Note that we set it to 0.05
 # so that the agent still performs some random actions. This ensures that the agent cannot get stuck.
 policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05,
-                              nb_steps=12500000)
+                              nb_steps=5000000)
 
 # The trade-off between exploration and exploitation is difficult and an on-going research topic.
 # If you want, you can experiment with the parameters or use a different policy. Another popular one
@@ -125,7 +133,7 @@ if args.mode == 'train':
     callbacks += [FileLogger(log_filename, interval=1000)]
     callbacks +=[keras.callbacks.TensorBoard(log_dir='./Graph', histogram_freq=0,  
           write_graph=True, write_images=True)]
-    dqn.fit(env, callbacks=callbacks, nb_steps=12500000, log_interval=100000,visualize=False)
+    dqn.fit(env, callbacks=callbacks, nb_steps=5000000, log_interval=100000,visualize=False)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=True)
