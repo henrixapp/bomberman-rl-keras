@@ -281,8 +281,8 @@ class BombermanDieHardEnv(gym.Env):
     #    3,4,5,6: player
 
     def _get_obs(self):
-        #return self._render_4_perspective()
-        return self._render_5x5_matrix()
+        return self._render_4_perspective()
+        #return self._render_5x5_matrix()
 
     def _get_obs2(self):
         rendered_map = np.copy(self.arena)
@@ -462,7 +462,7 @@ class BombermanDieHardEnv(gym.Env):
         self.round =0
         self.generate_arena()
         corner_pos = [np.random.choice([1,15]),np.random.choice([1,15])]
-        self.player = Agent(1,[corner_pos,[5,5]][np.random.choice(2)])# TODO: Remove hard coded position selection
+        self.player = Agent(1,corner_pos)# ,[corner_pos,[5,5]][np.random.choice(2)] TODO: Remove hard coded position selection
         self.bombs = []
         self.explosions =[]
         return self._get_obs()
@@ -481,13 +481,13 @@ class BombermanDieHardEnv(gym.Env):
                 outfile.write("{}".format(["💥","💣","❌","👣","❎","🏆","😎"][element+3]))
             outfile.write("\n")
         view = self._get_obs()
-        '''outfile.write("Local view:\n")
+        outfile.write("Local view:\n")
         if not RENDER_HISTORY:
             for zeile in view:
                 for element in zeile:
                     outfile.write("{}".format(["💥","💣","❌","👣","❎","🏆","😎"][element+3]))
                 outfile.write("\n")
-        '''
+        
         outfile.write("Aviable bombs:{}\n".format(self.player.bombs_left))
         if mode != 'human':
             with closing(outfile):
