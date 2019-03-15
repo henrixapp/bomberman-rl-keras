@@ -12,6 +12,7 @@ from rl.memory import SequentialMemory
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten
 from keras.optimizers import Adam
+import keras.backend as K
 import tensorflow as tf
 
 EXPLOSION = -3
@@ -66,28 +67,30 @@ def act(self):
     #print(observation)
     #action = self.dqn.forward(observation)
     
-    action = self.model.predict_on_batch(np.array([self.state[::-1]])).flatten()
-    #value = tf.nn.softmax(value)
-    action = np.argmax(action)
+    action = self.model.predict_on_batch(np.array([self.state[::-1]])) #.flatten() #[::-1]
+    action = tf.nn.softmax(action)[0]
+    print(K.eval(action))
+    action = np.argmax(K.eval(action))
     #print(value, action)
     reward = -1
     if action == 5:
         reward = 2
     #self.dqn.backward(reward, False)
     #print(self.events)
-    print(perspective(self.game_state))
+    #print(perspective(self.game_state))
     print(action)
     #if action < 4:
     #    action += 3
     #    action = action % 4
     #if action == 0: 
-    #    action = 1
-    #elif action == 1:
     #    action = 0
-    #if action == 2: 
-    #    action = 3
-    #elif action == 3:
+    #elif action == 1:
+    #    action = 1
+    #elif action == 2: 
     #    action = 2
+    #elif action == 3:
+    #    action = 3
+    
     self.env.step(action)
     self.env.render()
 
@@ -106,7 +109,7 @@ def perspective(game_state, distance=5):# added own field
     x,y = game_state['self'][0],game_state['self'][1]
     arena = game_state['arena']
     k = 0
-    for it_x, it_y in [ (0, -1),(0, -1),(-1, 0),(1, 0) ]:  #original sequence (-1, 0),(1, 0), (0, 1), (0, -1)
+    for it_x, it_y in [(-1, 0),(1, 0), (0,1), (0, -1)]:  #original sequence (-1, 0),(1, 0), (0, 1), (0, -1)
         wand = False
         for i in range(distance):  # should we be able to look over walls? --> currently not
             if(wand):
@@ -127,7 +130,7 @@ def perspective(game_state, distance=5):# added own field
 def push_state(state,current_state,length= WINDOW_LENGTH):
   if length==0:
     return state
-  return np.append(current_state[0:(current_state.shape[0]-1)],[state], axis=0)
+  return np.append(current_state[1:(current_state.shape[0])],[state], axis=0)
 def generate_state(state,length):
   if length==0:
     return state
