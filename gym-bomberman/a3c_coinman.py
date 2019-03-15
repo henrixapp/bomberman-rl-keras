@@ -42,7 +42,7 @@ class ActorCriticModel(keras.Model):
     self.state_size = state_size
     self.action_size = action_size
     print((self.state_size,self.action_size))
-    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,5,5))
+    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,4,4))
     self.dense1 = layers.Dense(128)
     self.dense1a = layers.Dense(64, activation='relu')
     self.activation1 = layers.Activation('relu')

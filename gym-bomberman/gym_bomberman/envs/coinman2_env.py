@@ -98,7 +98,7 @@ class Coinman2Env(gym.Env):
         self.screen_height = 8
         self.screen_width = 8
         self.action_space = spaces.Discrete(4)# six different actions see above
-        self.observation_space = spaces.Box(low=-3, high=3, shape=(5, 5), dtype=np.int8)
+        self.observation_space = spaces.Box(low=-3, high=3, shape=(4, 4), dtype=np.int8)
         self.seed()
         self.logger = Log()
         # Start the first game
@@ -245,8 +245,8 @@ class Coinman2Env(gym.Env):
     #    1 : Crate
     #    3,4,5,6: player
     def _get_obs(self):
-        #return self._render_4_perspective()
-        return self._render_5x5_matrix()
+        return self._render_4_perspective()
+        #return self._render_5x5_matrix()
     def _get_obs2(self):
         rendered_map = np.copy(self.arena)
         # add coins
