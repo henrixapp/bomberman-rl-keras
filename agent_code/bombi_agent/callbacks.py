@@ -33,7 +33,7 @@ def setup(self):
     np.random.seed(123)
     self.env.seed(123)
     nb_actions = self.env.action_space.n
-    print(nb_actions)
+    #print(nb_actions)
     self.model = Sequential([
         Flatten(input_shape=(WINDOW_LENGTH,4+RENDER_CORNERS+RENDER_HISTORY, 5)),
         Dense(128),
@@ -43,16 +43,10 @@ def setup(self):
         Dense(6),
         Activation("linear")
     ])
-    print(self.model.summary())
-    #memory = SequentialMemory(limit=1000000, window_length=WINDOW_LENGTH)
-    #policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05, nb_steps=12500000)
-    #self.dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory, nb_steps_warmup=50000, gamma=.99, target_model_update=5000, train_interval=4, delta_clip=1.)
-    #self.dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory,gamma=.99)
-    #self.dqn.compile(Adam(lr=.00025), metrics=['mae'])
+    #print(self.model.summary())
+    
     weights_filename = 'agent_code/bombi_agent/weights.h5f'
     self.model.load_weights(weights_filename)
-
-    
 
 def act(self):
     self.logger.info('Bombi acts now.')
@@ -63,37 +57,16 @@ def act(self):
     else:
         self.state = push_state(perspective(self.game_state), self.state)
     #print(self.state)
-    observation = perspective(self.game_state)
-    print(observation)
-    #action = self.dqn.forward(observation)
+    #observation = perspective(self.game_state)
+    #print(observation)
     
-    action = self.model.predict_on_batch(np.array([self.state[::-1]])) #.flatten() #[::-1]
+    action = self.model.predict_on_batch(np.array([self.state])) #.flatten() #[::-1]
     action = tf.nn.softmax(action)[0]
-    print(K.eval(action))
+    #print(K.eval(action))
     action = np.argmax(K.eval(action))
     #print(value, action)
-    reward = -1
-    if action == 5:
-        reward = 2
-    #self.dqn.backward(reward, False)
-    #print(self.events)
-    #print(perspective(self.game_state))
-    print(action)
-    #if action < 4:
-    #    action += 3
-    #    action = action % 4
-    #if action == 0: 
-    #    action = 0
-    #elif action == 1:
-    #    action = 1
-    #elif action == 2: 
-    #    action = 2
-    #elif action == 3:
-    #    action = 3
+    #print(action)
     
-    self.env.step(action)
-    #self.env.render()
-
     self.next_action = s.actions[action]
     
 
@@ -134,7 +107,6 @@ def perspective(game_state, distance=5):# added own field
                         if c[0] == x+it_x*(i) and c[1] == y+it_y*(i):
                             result[k, i] = COIN  # TODO Players, Explosions
                     if explosions[x+it_x*(i), y+it_y*(i)] > 0:
-                        print("Explosion BOOOOOOOM")
                         result[k,i] = EXPLOSION
         k = k+1
     result[0,0] = game_state['self'][3]
