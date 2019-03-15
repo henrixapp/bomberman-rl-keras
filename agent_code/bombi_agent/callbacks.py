@@ -63,8 +63,8 @@ def act(self):
     else:
         self.state = push_state(perspective(self.game_state), self.state)
     #print(self.state)
-    #observation = perspective(self.game_state)
-    #print(observation)
+    observation = perspective(self.game_state)
+    print(observation)
     #action = self.dqn.forward(observation)
     
     action = self.model.predict_on_batch(np.array([self.state[::-1]])) #.flatten() #[::-1]
@@ -92,7 +92,7 @@ def act(self):
     #    action = 3
     
     self.env.step(action)
-    self.env.render()
+    #self.env.render()
 
     self.next_action = s.actions[action]
     
@@ -108,13 +108,17 @@ def perspective(game_state, distance=5):# added own field
     result = np.zeros((4+RENDER_CORNERS+ RENDER_HISTORY, distance),dtype=np.int8) #ToDo: case for rendercorners needs to be implemented
     x,y = game_state['self'][0],game_state['self'][1]
     arena = game_state['arena']
+    bombs = game_state['bombs']
+    coins = game_state['coins']
+    explosions = game_state['explosions']
     k = 0
-    for it_x, it_y in [(-1, 0),(1, 0), (0,1), (0, -1)]:  #original sequence (-1, 0),(1, 0), (0, 1), (0, -1)
+    for it_x, it_y in [(-1, 0), (1, 0), (0, 1), (0, -1)]:
         wand = False
         for i in range(distance):  # should we be able to look over walls? --> currently not
             if(wand):
                 result[k, i] = WALL
             else:
+                # TODO; Wand bedingung updaten
                 if x+it_x*(i) < 0 or 0 > y+it_y*(i) or x+it_x*(i) > s.cols or s.rows < y+it_y*(i):
                     wand = True
                     result[k, i] = WALL
@@ -123,6 +127,15 @@ def perspective(game_state, distance=5):# added own field
                     result[k, i] = WALL
                 else:
                     result[k,i] = arena[x+it_x*(i), y+it_y*(i)] # forgotten first important!
+                    for b in bombs:
+                        if b[0] == x+it_x*(i) and b[1] == y+it_y*(i):
+                            result[k, i] = -2
+                    for c in coins:
+                        if c[0] == x+it_x*(i) and c[1] == y+it_y*(i):
+                            result[k, i] = COIN  # TODO Players, Explosions
+                    if explosions[x+it_x*(i), y+it_y*(i)] > 0:
+                        print("Explosion BOOOOOOOM")
+                        result[k,i] = EXPLOSION
         k = k+1
     result[0,0] = game_state['self'][3]
     return (result.astype('float32'))/7
