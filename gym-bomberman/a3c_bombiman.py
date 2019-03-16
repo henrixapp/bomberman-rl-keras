@@ -200,7 +200,7 @@ class MasterAgent():
 
   def play(self):
     env = gym.make(self.game_name).unwrapped
-    state = env.reset()
+    state = generate_state(env.reset(),WINDOW_LENGTH)
     model = self.global_model
     model_path = os.path.join(self.save_dir, 'model_{}.h5'.format(self.game_name))
     print('Loading model from: {}'.format(model_path))
