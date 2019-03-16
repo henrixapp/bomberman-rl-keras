@@ -176,7 +176,7 @@ class MasterAgent():
                       self.global_model,
                       self.opt, res_queue,
                       i, game_name=self.game_name,
-                      save_dir=self.save_dir) for i in range(16)]
+                      save_dir=self.save_dir) for i in range(128)]
 
     for i, worker in enumerate(workers):
       print("Starting worker {}".format(i))
@@ -295,8 +295,9 @@ class Worker(threading.Thread):
         action = np.random.choice(self.action_size, p=probs.numpy()[0])
         new_state, reward, done, _ = self.env.step(action)
         new_state = push_state(new_state,current_state)
-        if done:
-          reward = -1
+        # Want to store reward determined by env
+        #if done:
+        #  reward = -1
         ep_reward += reward
         mem.store(current_state, action, reward)
 

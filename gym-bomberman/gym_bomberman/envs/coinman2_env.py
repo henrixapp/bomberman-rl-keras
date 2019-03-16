@@ -340,19 +340,18 @@ class Coinman2Env(gym.Env):
 
     def generate_arena(self):
         # Arena with wall and crate layout
-        self.arena = np.zeros((8,8), dtype=np.int8)
+        self.arena = np.zeros((17,17), dtype=np.int8)
         self.arena[:1, :] = -1
         self.arena[-1:,:] = -1
         self.arena[:, :1] = -1
         self.arena[:,-1:] = -1
         #crates
-        for x in range(8):
-            for y in range(8):
+        for x in range(17):
+            for y in range(17):
                 if (x+1)*(y+1) % 2 == 1:
-                    pass
-                    #self.arena[x,y] = -1
+                    self.arena[x,y] = -1
         # Starting positions
-        self.start_positions = [(1,1), (1,8-2), (8-2,1), (8-2,8-2)]
+        self.start_positions = [(1,1), (1,17-2), (17-2,1), (17-2,17-2)]
         np.random.shuffle(self.start_positions)
         for (x,y) in self.start_positions:
             for (xx,yy) in [(x,y), (x-1,y), (x+1,y), (x,y-1), (x,y+1)]:
@@ -361,11 +360,11 @@ class Coinman2Env(gym.Env):
         # Distribute coins evenly
         self.coins = []
         for k in range(1):
-            for i in range(8):
-                for j in range(8):
+            for i in range(17):
+                for j in range(17):
                     n_crates = 0#(self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
                     while True:
-                        x, y = np.random.randint(0,7), np.random.randint(0,7) #i,j
+                        x, y = np.random.randint(0,17), np.random.randint(0,17) #i,j
                         if n_crates == 0 and self.arena[x,y] == 0 and np.random.randint(0,100)<30:
                             self.coins.append(Coin((x,y)))
                             self.coins[-1].collectable = True
@@ -378,7 +377,8 @@ class Coinman2Env(gym.Env):
     def reset(self):
         self.round =0
         self.generate_arena()
-        self.player = Agent(1,[1,1])
+        corner_pos = [np.random.choice([1,15]),np.random.choice([1,15])]
+        self.player = Agent(1,corner_pos)
         self.bombs = []
         self.explosions =[]
         return self._get_obs()
