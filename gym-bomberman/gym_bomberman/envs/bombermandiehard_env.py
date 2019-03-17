@@ -161,8 +161,8 @@ class BombermanDieHardEnv(gym.Env):
         elif action == WAIT:
             self.player.events.append(e.WAITED)
             #reward = -2
-        else:
-            reward = 0
+        #else:
+        #    reward = 0
         # collect coins
         for coin in self.coins:
             if coin.collectable and not coin.collected:
@@ -259,7 +259,7 @@ class BombermanDieHardEnv(gym.Env):
         if self.round > 400:
             reward = -1
         if not self.player.alive:
-            reward = -500
+            reward = -500 - self.player.score*100# dying always costs  -500
         # reward = reward + self.player.score*10
 
         return (self._get_obs(), reward, done, {})
