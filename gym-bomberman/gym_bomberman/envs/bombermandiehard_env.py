@@ -118,7 +118,7 @@ class BombermanDieHardEnv(gym.Env):
         # six different actions see above
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(
-            low=-3, high=3, shape=(5+ RENDER_CORNERS+ RENDER_HISTORY, 5), dtype=np.int8)
+            low=-3, high=3, shape=(4+ RENDER_CORNERS+ RENDER_HISTORY, 5), dtype=np.int8)
         self.seed()
         #self.logger = Log()
         # Start the first game
