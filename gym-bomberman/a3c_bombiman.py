@@ -35,6 +35,15 @@ parser.add_argument('--gamma', default=0.99,
 parser.add_argument('--save-dir', default='/tmp/', type=str,
                     help='Directory in which you desire to save the model.')
 args = parser.parse_args()
+WINDOW_LENGTH = 4
+def push_state(state,current_state,length= WINDOW_LENGTH):
+  if length==0:
+    return state
+  return np.append(current_state[1:(current_state.shape[0])],[state], axis=0)
+def generate_state(state,length):
+  if length==0:
+    return state
+  return np.append([state],[state for i in range(length)], axis=0)
 
 class ActorCriticModel(keras.Model):
   def __init__(self, state_size, action_size):
@@ -42,7 +51,7 @@ class ActorCriticModel(keras.Model):
     self.state_size = state_size
     self.action_size = action_size
     print((self.state_size,self.action_size))
-    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,4,4))
+    self.flatten0 = layers.Flatten(input_shape=(args.update_freq+1,WINDOW_LENGTH, 4,5))
     self.dense1 = layers.Dense(128)
     self.dense1a = layers.Dense(64, activation='relu')
     self.activation1 = layers.Activation('relu')
@@ -135,7 +144,7 @@ class RandomAgent:
 
 class MasterAgent():
   def __init__(self):
-    self.game_name = 'coinman2-v0'
+    self.game_name = 'bombermandiehard-v0'
     save_dir = args.save_dir
     self.save_dir = save_dir
     if not os.path.exists(save_dir):
@@ -150,7 +159,9 @@ class MasterAgent():
 
     self.global_model = ActorCriticModel(self.state_size, self.action_size)  # global network
     print(env.observation_space.shape[0],env.observation_space.shape[1])
-    print(self.global_model(tf.convert_to_tensor(np.random.random((1, env.observation_space.shape[0],env.observation_space.shape[1])), dtype=tf.float32)))
+    initial = generate_state(env.reset(),WINDOW_LENGTH)
+    print(self.global_model.call(tf.convert_to_tensor([initial],dtype=tf.float32)))
+    #print(self.global_model(tf.convert_to_tensor(np.random.random((1, env.observation_space.shape[0],env.observation_space.shape[1])), dtype=tf.float32)))
 
   def train(self):
     if args.algorithm == 'random':
@@ -165,7 +176,7 @@ class MasterAgent():
                       self.global_model,
                       self.opt, res_queue,
                       i, game_name=self.game_name,
-                      save_dir=self.save_dir) for i in range(16)]
+                      save_dir=self.save_dir) for i in range(128)]
 
     for i, worker in enumerate(workers):
       print("Starting worker {}".format(i))
@@ -189,7 +200,7 @@ class MasterAgent():
 
   def play(self):
     env = gym.make(self.game_name).unwrapped
-    state = env.reset()
+    state = generate_state(env.reset(),WINDOW_LENGTH)
     model = self.global_model
     model_path = os.path.join(self.save_dir, 'model_{}.h5'.format(self.game_name))
     print('Loading model from: {}'.format(model_path))
@@ -204,7 +215,8 @@ class MasterAgent():
         policy, value = model(tf.convert_to_tensor(state[None, :], dtype=tf.float32))
         policy = tf.nn.softmax(policy)
         action = np.argmax(policy)
-        state, reward, done, _ = env.step(action)
+        nstate, reward, done, _ = env.step(action)
+        state = push_state(nstate,state)
         reward_sum += reward
         print("{}. Reward: {}, action: {}".format(step_counter, reward_sum, action))
         step_counter += 1
@@ -246,7 +258,7 @@ class Worker(threading.Thread):
                opt,
                result_queue,
                idx,
-               game_name='coinman2-v0',
+               game_name='bombermandiehard-v0',
                save_dir='/tmp'):
     super(Worker, self).__init__()
     self.state_size = state_size
@@ -265,7 +277,7 @@ class Worker(threading.Thread):
     total_step = 1
     mem = Memory()
     while Worker.global_episode < args.max_eps:
-      current_state = self.env.reset()
+      current_state = generate_state(self.env.reset(),WINDOW_LENGTH)
       mem.clear()
       ep_reward = 0.
       ep_steps = 0
@@ -282,8 +294,10 @@ class Worker(threading.Thread):
         #print(probs)
         action = np.random.choice(self.action_size, p=probs.numpy()[0])
         new_state, reward, done, _ = self.env.step(action)
-        if done:
-          reward = -1
+        new_state = push_state(new_state,current_state)
+        # Want to store reward determined by env
+        #if done:
+        #  reward = -1
         ep_reward += reward
         mem.store(current_state, action, reward)
 

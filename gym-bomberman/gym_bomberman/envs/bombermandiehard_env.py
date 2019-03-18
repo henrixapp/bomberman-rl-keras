@@ -118,7 +118,7 @@ class BombermanDieHardEnv(gym.Env):
         # six different actions see above
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(
-            low=-3, high=3, shape=(5+ RENDER_CORNERS+ RENDER_HISTORY, 5), dtype=np.int8)
+            low=-3, high=3, shape=(4+ RENDER_CORNERS+ RENDER_HISTORY, 5), dtype=np.int8)
         self.seed()
         #self.logger = Log()
         # Start the first game
@@ -161,8 +161,8 @@ class BombermanDieHardEnv(gym.Env):
         elif action == WAIT:
             self.player.events.append(e.WAITED)
             #reward = -2
-        else:
-            reward = 0
+        #else:
+        #    reward = 0
         # collect coins
         for coin in self.coins:
             if coin.collectable and not coin.collected:
@@ -254,12 +254,12 @@ class BombermanDieHardEnv(gym.Env):
         # check whether coins where collected
         self.round = self.round+1
         done = self.check_if_all_coins_collected(
-        ) or self.all_players_dead() or self.round > 200
+        ) or self.all_players_dead() or self.round > 400
         #no extra detenation reward
-        if self.round > 200:
+        if self.round > 400:
             reward = -1
         if not self.player.alive:
-            reward = -500
+            reward = -500 - self.player.score*100# dying always costs  -500
         # reward = reward + self.player.score*10
 
         return (self._get_obs(), reward, done, {})
