@@ -12,10 +12,13 @@ from keras.optimizers import Adam
 
 import numba as nb
 from tensorboardX import SummaryWriter
+import tensorflow as tf
+import matplotlib.pyplot as plt
+#tf.enable_eager_execution()
 
 ENV = 'bombermandiehard-v0'
 
-EPISODES = 1000#000
+EPISODES = 100#100000
 
 LOSS_CLIPPING = 0.2 # Only implemented clipping for the surrogate loss, paper said it was best
 EPOCHS = 10
@@ -23,7 +26,7 @@ NOISE = 1.0 # Exploration noise
 
 GAMMA = 0.99
 
-BUFFER_SIZE = 256
+BUFFER_SIZE = 1#256
 BATCH_SIZE = 64
 NUM_ACTIONS = 6
 #NUM_STATE = 8
@@ -89,7 +92,6 @@ class Agent:
                           advantage=advantage,
                           old_prediction=old_prediction)])
         model.summary()
-
         return model
 
     def build_critic(self):
@@ -183,11 +185,32 @@ class Agent:
             if self.episode % 10 == 0:
                 print("Episode: ", self.episode, " Actor loss: ",  actor_loss.history['loss'][-1], " Critic loss: ", critic_loss.history['loss'][-1], " reward: ", reward[-1])
             self.gradient_steps += 1
+        self.actor.save_weights('PPO.h5')
 
-    def play(self):
-        self.actor.test(self.env, nb_episodes=4, visualize=True)
+    def play(self, render_every_step=False):
+        env = gym.make(ENV).unwrapped
+        state = env.reset()
+        done = False
+        step_counter = 0
+        reward_sum = 0
+
+        try:
+            while not done:
+                env.render(mode='human')
+                policy, value = self.actor.predict_on_batch(state.reshape(BUFFER_SIZE, self.state_size))
+                policy = tf.nn.softmax(policy)
+                action = np.argmax(policy)
+                nstate, reward, done, _ = env.step(action)
+                reward_sum += reward
+                print("{}. Reward: {}, action: {}".format(step_counter, reward_sum, action))
+                step_counter += 1
+        except KeyboardInterrupt:
+            print("Received Keyboard Interrupt. Shutting down.")
+        finally:
+            env.close()
 
 if __name__ == '__main__':
     ag = Agent()
     ag.run()
+    #ag.play(render_every_step=True)
     
