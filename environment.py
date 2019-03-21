@@ -94,7 +94,7 @@ class BombeRLeWorld(object):
         self.active_agents = []
         self.bombs = []
         self.explosions = []
-        self.round_id = f'Replay {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+        self.round_id = f'Replay {datetime.now().strftime("%Y-%m-%d %H-%M-%S")}'
 
         # Arena with wall and crate layout
         self.arena = (np.random.rand(s.cols, s.rows) < s.crate_density).astype(int)
@@ -175,6 +175,7 @@ class BombeRLeWorld(object):
         state['step'] = self.step
         state['arena'] = np.array(self.arena)
         state['self'] = agent.get_state()
+        state['train'] = agent.train_flag.is_set()
         state['others'] = [other.get_state() for other in self.active_agents if other is not agent]
         state['bombs'] = [bomb.get_state() for bomb in self.bombs]
         state['coins'] = [coin.get_state() for coin in self.coins if coin.collectable]
@@ -539,7 +540,7 @@ class ReplayWorld(BombeRLeWorld):
         # Recreate the agents
         self.colors = ['blue', 'green', 'yellow', 'pink']
         self.agents = [ReplayAgent(name, self.colors.pop(), x, y)
-            for (x,y,name,b) in self.replay['agents']]
+            for (x,y,name,b,s) in self.replay['agents']]
         for i,t in enumerate(self.replay['times']):
             self.agents[i].mean_time = t
 
@@ -555,7 +556,6 @@ class ReplayWorld(BombeRLeWorld):
 
         # Bookkeeping
         self.step = 0
-        self.active_agents = []
         self.bombs = []
         self.explosions = []
         self.running = True
