@@ -87,7 +87,7 @@ def setup(self):
     self.action_size = self.env.action_space.n
     self.model = ActorCriticModel(self.state_size, self.action_size)
     print(self.model(tf.convert_to_tensor(self.state[None, :], dtype=tf.float32)))
-    self.model.load_weights('agent_code/coini_agent/weights.h5')
+    self.model.load_weights('weights.h5')
     
 def act(self):
     self.logger.info('Coini acts now.')
