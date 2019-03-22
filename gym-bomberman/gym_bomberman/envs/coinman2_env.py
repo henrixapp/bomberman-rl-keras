@@ -365,7 +365,7 @@ class Coinman2Env(gym.Env):
                     n_crates = 0#(self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
                     while True:
                         x, y = np.random.randint(0,17), np.random.randint(0,17) #i,j
-                        if n_crates == 0 and self.arena[x,y] == 0 and np.random.randint(0,100)<30:
+                        if n_crates == 0 and self.arena[x,y] == 0 and np.random.randint(0,100)<100:
                             self.coins.append(Coin((x,y)))
                             self.coins[-1].collectable = True
                             break

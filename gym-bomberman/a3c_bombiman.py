@@ -24,7 +24,7 @@ parser.add_argument('--algorithm', default='a3c', type=str,
                     help='Choose between \'a3c\' and \'random\'.')
 parser.add_argument('--train', dest='train', action='store_true',
                     help='Train our model.')
-parser.add_argument('--lr', default=0.00025,
+parser.add_argument('--lr', default=0.0000025,
                     help='Learning rate for the shared optimizer.')
 parser.add_argument('--update-freq', default=500, type=int,
                     help='How often to update the global model.')
@@ -176,7 +176,7 @@ class MasterAgent():
                       self.global_model,
                       self.opt, res_queue,
                       i, game_name=self.game_name,
-                      save_dir=self.save_dir) for i in range(128)]
+                      save_dir=self.save_dir) for i in range(16)]
 
     for i, worker in enumerate(workers):
       print("Starting worker {}".format(i))
@@ -316,6 +316,7 @@ class Worker(threading.Thread):
           self.opt.apply_gradients(zip(grads,
                                        self.global_model.trainable_weights))
           # Update local model with new weights
+          #if total_step % 10==5:
           self.local_model.set_weights(self.global_model.get_weights())
 
           mem.clear()
