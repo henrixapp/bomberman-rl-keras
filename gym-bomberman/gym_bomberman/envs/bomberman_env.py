@@ -22,7 +22,8 @@ EXPLOSION = -3
 FREE = 0
 CRATE = 1
 PLAYER = 3
-
+RENDER_CORNERS = False
+RENDER_HISTORY = True
 
 class Agent(object):
     def __init__(self, id, pos):
@@ -116,7 +117,7 @@ class BombermanEnv(gym.Env):
         # six different actions see above
         self.action_space = spaces.Discrete(6)
         self.observation_space = spaces.Box(
-            low=-3, high=3, shape=(5, 4), dtype=np.int8)
+            low=-3, high=3, shape=(4+ RENDER_CORNERS+ RENDER_HISTORY, 4), dtype=np.int8)
         self.seed()
         self.logger = Log()
         # Start the first game
@@ -248,12 +249,12 @@ class BombermanEnv(gym.Env):
         self.round = self.round+1
         done = self.check_if_all_coins_collected(
         ) or self.all_players_dead() or self.round > 200
-        if detonation:
-            reward= 10
+        #if detonation:
+        #    reward= 10
         if self.round > 200:
             reward = -1
         if not self.player.alive:
-            reward = -1
+            reward = -1000
         # reward = reward + self.player.score*10
 
         return (self._get_obs(), reward, done, {})
@@ -295,7 +296,7 @@ class BombermanEnv(gym.Env):
         return rendered_map
 
     def _render_4_perspective(self, distance=4):
-        result = np.zeros((5, distance),dtype=np.int8)
+        result = np.zeros((4+RENDER_CORNERS+ RENDER_HISTORY, distance),dtype=np.int8)
         x = self.player.x
         y = self.player.y
         k = 0
@@ -316,30 +317,44 @@ class BombermanEnv(gym.Env):
                         result[k,i] = self.arena[x+it_x*(i+1), y+it_y*(i+1)] # forgotten first important!
                         for b in self.bombs:
                             if b.x == x+it_x*(i+1) and b.y == y+it_y*(i+1):
-                                result[k, i] = BOMB
+                                result[k, i] = -2
                         for c in self.coins:
                             if c.x == x+it_x*(i+1) and c.y == y+it_y*(i+1) and c.collectable:
-                                result[k, i] = COIN  # TODO Players
+                                result[k, i] = COIN  # TODO Players, Explosions
+                        for e in self.explosions:
+                            if (x+it_x*(i+1), y+it_y*(i+1)) in e.blast_coords:
+                                result[k,i] = EXPLOSION
             k = k+1
         k= distance
-        i =0 #adding corners
-        for it_x, it_y in [(-1, -1), (1, 1), (-1, 1), (1, -1)]:
-            # TODO; Wand bedingung updaten
-            if x+it_x < 0 or 0 > y+it_y or x+it_x > s.cols or s.rows < y+it_y:
-                wand = True
-                result[k, i] = WALL
-            elif self.arena[x+it_x,y+it_y] == WALL:
-                wand= True
-                result[k,i]= WALL
-            else:
-                result[k,i] = self.arena[x+it_x, y+it_y] # forgotten first important!
-                for b in self.bombs:
-                    if b.x == x+it_x and b.y == y+it_y:
-                        result[k,i] = BOMB
-                for c in self.coins:
-                    if c.x == x+it_x and c.y == y+it_y and c.collectable:
-                        result[k,i] = COIN
-            i = i+1
+        if RENDER_CORNERS:
+            i =0 #adding corners
+            for it_x, it_y in [(-1, -1), (1, 1), (-1, 1), (1, -1)]:
+                # TODO; Wand bedingung updaten
+                if x+it_x < 0 or 0 > y+it_y or x+it_x > s.cols or s.rows < y+it_y:
+                    wand = True
+                    result[k, i] = WALL
+                elif self.arena[x+it_x,y+it_y] == WALL:
+                    wand= True
+                    result[k,i]= WALL
+                else:
+                    result[k,i] = self.arena[x+it_x, y+it_y] # forgotten first important!
+                    for b in self.bombs:
+                        if b.x == x+it_x and b.y == y+it_y:
+                            result[k,i] = -2
+                    for c in self.coins:
+                        if c.x == x+it_x and c.y == y+it_y and c.collectable:
+                            result[k,i] = COIN
+                    for e in self.explosions:
+                            if (x+it_x, y+it_y) in e.blast_coords:
+                                result[k,i] = EXPLOSION
+                i = i+1
+            k = k+1 # inc by one 
+        if RENDER_HISTORY:
+            for i in range(distance):
+                if len(self.player.events)<=i:
+                    result[k,i]=-1
+                else:
+                    result[k,i]=self.player.events[len(self.player.events)-i-1]
         return result#.reshape(4*distance)
     def generate_arena(self):
         # Arena with wall and crate layout
@@ -399,10 +414,11 @@ class BombermanEnv(gym.Env):
             outfile.write("\n")
         view = self._get_obs()
         outfile.write("Local view:\n")
-        for zeile in view:
-            for element in zeile:
-                outfile.write("{}".format(["💥","💣","❌","👣","❎","🏆","😎"][element+3]))
-            outfile.write("\n")
+        if not RENDER_HISTORY:
+            for zeile in view:
+                for element in zeile:
+                    outfile.write("{}".format(["💥","💣","❌","👣","❎","🏆","😎"][element+3]))
+                outfile.write("\n")
         if mode != 'human':
             with closing(outfile):
                 return outfile.getvalue()

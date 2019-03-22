@@ -115,7 +115,7 @@ class Coinman2Env(gym.Env):
         return is_free
     def step(self, action):
         reward = -1 #0 # TODO coins collected as reward
-        assert self.action_space.contains(action)
+        #assert self.action_space.contains(action)
         #print(action)
         if action == UP and self.tile_is_free(self.player.x, self.player.y - 1):
             self.player.y -= 1
@@ -229,9 +229,9 @@ class Coinman2Env(gym.Env):
             reward=-1
         #reward = reward + self.player.score*1000
         
-        return (self._render_4_perspective(), reward, done, {})
+        return (self._get_obs(), reward, done, {})
     def check_if_all_coins_collected(self):
-        return  len([c for c in self.coins if c.collected])==len(self.coins)
+        return len([c for c in self.coins if c.collected])==len(self.coins)
     def all_players_dead(self):
         return not self.player.alive
         #return length([a for a in self.players if a])
@@ -246,6 +246,7 @@ class Coinman2Env(gym.Env):
     #    3,4,5,6: player
     def _get_obs(self):
         return self._render_4_perspective()
+        #return self._render_5x5_matrix()
     def _get_obs2(self):
         rendered_map = np.copy(self.arena)
         # add coins
@@ -288,20 +289,69 @@ class Coinman2Env(gym.Env):
                                 result[k,i] = COIN # TODO Players
             k = k+1
         return result#.reshape(4*distance)
+
+    def _render_5x5_matrix(self):
+        result = np.zeros((5,5))
+        x = self.player.x
+        y = self.player.y
+        k = 0
+        for it_x,it_y in [(-1,0),(1,0),(0,1),(0,-1)]:
+            wand = False
+            for i in range(4):# should we be able to look over walls? --> currently not
+                if(wand):
+                    result[k,i+1]= WALL
+                else:
+                    if x+it_x*(i+1)<0 or 0 >y+it_y*(i+1) or x+it_x*(i+1)>7 or 7 < y+it_y*(i+1):# TODO; Wand bedingung updaten
+                        wand= True
+                        result[k,i+1]=WALL
+                    elif self.arena[x+it_x*(i+1),y+it_y*(i+1)] == WALL:
+                        wand= True
+                        result[k,i+1]= WALL
+                    else:
+                        for b in self.bombs:
+                            if b.x == x+it_x*(i+1) and b.y == y+it_y*(i+1):
+                                result[k,i+1] = BOMB
+                        for c in self.coins:
+                            if c.x == x+it_x*(i+1) and c.y == y+it_y*(i+1) and c.collectable:
+                                result[k,i+1] = COIN # TODO Players
+            k = k+1
+        
+        #bomb positions, no bomb is set to 127
+        result[0:4,0] = 0
+        result[4,1:5] = 0
+        for i, bomb in enumerate(self.bombs):
+            if i == 0:
+                result[0,0] = bomb.x
+                result[1,0] = bomb.y
+            elif i == 1:
+                result[2,0] = bomb.x
+                result[3,0] = bomb.y
+            elif i == 2:
+                result[4,1] = bomb.x
+                result[4,2] = bomb.y
+            elif i == 3:
+                result[4,3] = bomb.x
+                result[4,4] = bomb.y
+        
+        #current position
+        result[4,0] = self.arena[self.player.x, self.player.y]
+        
+        return result
+
     def generate_arena(self):
         # Arena with wall and crate layout
-        self.arena = np.zeros((8,8), dtype=np.int8)
+        self.arena = np.zeros((17,17), dtype=np.int8)
         self.arena[:1, :] = -1
         self.arena[-1:,:] = -1
         self.arena[:, :1] = -1
         self.arena[:,-1:] = -1
-        for x in range(8):
-            for y in range(8):
+        #crates
+        for x in range(17):
+            for y in range(17):
                 if (x+1)*(y+1) % 2 == 1:
-                    pass
                     self.arena[x,y] = -1
         # Starting positions
-        self.start_positions = [(1,1), (1,8-2), (8-2,1), (8-2,8-2)]
+        self.start_positions = [(1,1), (1,17-2), (17-2,1), (17-2,17-2)]
         np.random.shuffle(self.start_positions)
         for (x,y) in self.start_positions:
             for (xx,yy) in [(x,y), (x-1,y), (x+1,y), (x,y-1), (x,y+1)]:
@@ -310,12 +360,12 @@ class Coinman2Env(gym.Env):
         # Distribute coins evenly
         self.coins = []
         for k in range(1):
-            for i in range(8):
-                for j in range(8):
+            for i in range(17):
+                for j in range(17):
                     n_crates = 0#(self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
                     while True:
-                        x, y = i,j#np.random.randint(0,7), np.random.randint(0,7)
-                        if n_crates == 0 and self.arena[x,y] == 0 and np.random.randint(0,100)<30:
+                        x, y = np.random.randint(0,17), np.random.randint(0,17) #i,j
+                        if n_crates == 0 and self.arena[x,y] == 0 and np.random.randint(0,100)<100:
                             self.coins.append(Coin((x,y)))
                             self.coins[-1].collectable = True
                             break
@@ -327,7 +377,8 @@ class Coinman2Env(gym.Env):
     def reset(self):
         self.round =0
         self.generate_arena()
-        self.player = Agent(1,[1,1])
+        corner_pos = [np.random.choice([1,15]),np.random.choice([1,15])]
+        self.player = Agent(1,corner_pos)
         self.bombs = []
         self.explosions =[]
         return self._get_obs()
@@ -349,17 +400,6 @@ class Coinman2Env(gym.Env):
             with closing(outfile):
                 return outfile.getvalue()
 if __name__ == "__main__":
-    benv = BombermanEnv(s)
+    benv = Coinman2Env(s)
     benv.step(RIGHT)
-    benv.step(BOMB)
-    benv.render()
-    benv.step(LEFT)
-    benv.render()
-    benv.step(WAIT)
-    benv.render()
-    benv.step(WAIT)
-    benv.render()
-    benv.step(WAIT)
-    benv.render()
-    benv.step(WAIT)
-    benv.render()
+    benv.render('human')

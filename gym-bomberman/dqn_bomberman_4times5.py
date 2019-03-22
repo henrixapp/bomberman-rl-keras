@@ -18,9 +18,11 @@ from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 import keras
 import keras.callbacks
 
+RENDER_CORNERS = False
+RENDER_HISTORY = False
+INPUT_SHAPE = (5+RENDER_CORNERS+RENDER_HISTORY, 5)
+WINDOW_LENGTH = 4
 
-INPUT_SHAPE = (5, 4)
-WINDOW_LENGTH = 1
 
 
 class AtariProcessor(Processor):
@@ -44,7 +46,7 @@ class AtariProcessor(Processor):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
-parser.add_argument('--env-name', type=str, default='bomberman-v0')
+parser.add_argument('--env-name', type=str, default='bombermandiehard-v0')
 parser.add_argument('--weights', type=str, default=None)
 args = parser.parse_args()
 
@@ -69,13 +71,13 @@ elif K.image_dim_ordering() == 'th':
     #model.add(Permute((1, 2, 3), input_shape=input_shape))
 else:
     raise RuntimeError('Unknown image_dim_ordering.')
-window_length = 1
+window_length = 4
 #model.add(Flatten(input_shape=(1,) + env.observation_space.shape))
 model = Sequential([
-            Flatten(input_shape=(window_length,5, 4)),
-            Dense(64),
+            Flatten(input_shape=(window_length,4+RENDER_CORNERS+RENDER_HISTORY, 5)),
+            Dense(128),
             Activation("relu"),
-            Dense(32),
+            Dense(64),
            
             Activation("relu"),
             Dense(6),
@@ -85,7 +87,7 @@ print(model.summary())
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
-memory = SequentialMemory(limit=150000, window_length=WINDOW_LENGTH)
+memory = SequentialMemory(limit=1000000, window_length=WINDOW_LENGTH)
 processor = AtariProcessor()
 
 # Select a policy. We use eps-greedy action selection, which means that a random action is selected
@@ -93,13 +95,15 @@ processor = AtariProcessor()
 # the agent initially explores the environment (high eps) and then gradually sticks to what it knows
 # (low eps). We also set a dedicated eps value that is used during testing. Note that we set it to 0.05
 # so that the agent still performs some random actions. This ensures that the agent cannot get stuck.
-#policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05,
- #                             nb_steps=1500000)
+
+policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05,
+                              nb_steps=42000000)
+
 
 # The trade-off between exploration and exploitation is difficult and an on-going research topic.
 # If you want, you can experiment with the parameters or use a different policy. Another popular one
 # is Boltzmann-style exploration:
-policy = BoltzmannQPolicy()
+#policy = BoltzmannQPolicy()
 # Feel free to give it a try!
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
@@ -110,22 +114,28 @@ dqn.compile(Adam(lr=.00025), metrics=['mae'])
 if args.mode == 'train':
     # Okay, now it's time to learn something! We capture the interrupt exception so that training
     # can be prematurely aborted. Notice that now you can use the built-in Keras callbacks!
-    weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
-    checkpoint_weights_filename = 'dqn_' + args.env_name + '_weights_{step}.h5f'
+    weights_filename = 'dqn_{}without_det12m_weights.h5f'.format(args.env_name)
+    weights_filename = 'dqn_{}without_det12m_weights.h5f'.format(args.env_name)
+    if args.weights:
+        weights_filename = args.weights
+    dqn.load_weights(weights_filename)
+    checkpoint_weights_filename = 'dqn_' + args.env_name + 'without_det12m_weights_{step}.h5f'
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
-    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=25000)]
-    callbacks += [FileLogger(log_filename, interval=100)]
+    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=750000)]
+    callbacks += [FileLogger(log_filename, interval=1000)]
     callbacks +=[keras.callbacks.TensorBoard(log_dir='./Graph', histogram_freq=0,  
           write_graph=True, write_images=True)]
-    dqn.fit(env, callbacks=callbacks, nb_steps=500000, log_interval=15000,visualize=False)
+
+    dqn.fit(env, callbacks=callbacks, nb_steps=42000000, log_interval=100000,visualize=False)
+
 
     # After training is done, we save the final weights one more time.
-    dqn.save_weights(weights_filename, overwrite=True)
+    dqn.save_weights('double_{}'.format(weights_filename), overwrite=True)
 
     # Finally, evaluate our algorithm for 10 episodes.
     dqn.test(env, nb_episodes=10, visualize=True)
 elif args.mode == 'test':
-    weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
+    weights_filename = 'weights.h5f'.format(args.env_name)
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)

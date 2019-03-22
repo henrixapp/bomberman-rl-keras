@@ -117,18 +117,19 @@ class BombeRLeWorld(object):
 
         # Distribute coins evenly
         self.coins = []
-        for i in range(3):
-            for j in range(3):
-                n_crates = (self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
-                while True:
-                    x, y = np.random.randint(1+5*i,6+5*i), np.random.randint(1+5*j,6+5*j)
-                    if n_crates == 0 and self.arena[x,y] == 0:
-                        self.coins.append(Coin((x,y)))
-                        self.coins[-1].collectable = True
-                        break
-                    elif self.arena[x,y] == 1:
-                        self.coins.append(Coin((x,y)))
-                        break
+        for _ in range(10):
+            for i in range(3):
+                for j in range(3):
+                    n_crates = (self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
+                    while True:
+                        x, y = np.random.randint(1+5*i,6+5*i), np.random.randint(1+5*j,6+5*j)
+                        if n_crates == 0 and self.arena[x,y] == 0:
+                            self.coins.append(Coin((x,y)))
+                            self.coins[-1].collectable = True
+                            break
+                        elif self.arena[x,y] == 1:
+                            self.coins.append(Coin((x,y)))
+                            break
 
         # Reset agents and distribute starting positions
         for agent in self.agents:

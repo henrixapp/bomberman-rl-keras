@@ -110,3 +110,6 @@ screenshots/*.mp4
 screenshots/*.webm
 
 replays/
+
+#VS Code env settings
+.vscode/
