@@ -45,7 +45,7 @@ def setup(self):
     ])
     #print(self.model.summary())
     
-    weights_filename = 'agent_code/bombi_agent/weights.h5f'
+    weights_filename = 'weights.h5f'
     self.model.load_weights(weights_filename)
 
 def act(self):

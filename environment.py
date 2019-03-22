@@ -117,7 +117,7 @@ class BombeRLeWorld(object):
 
         # Distribute coins evenly
         self.coins = []
-        for _ in range(10):
+        for _ in range(1):
             for i in range(3):
                 for j in range(3):
                     n_crates = (self.arena[1+5*i:6+5*i, 1+5*j:6+5*j] == 1).sum()
