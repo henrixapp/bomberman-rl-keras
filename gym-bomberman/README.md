@@ -1,6 +1,6 @@
 # Gym_bomberman
 
-Provides a package for use with certain algorithms
+Provides a package containing several environments for use with certain algorithms.
 
 ##  Installation
 
@@ -86,23 +86,34 @@ All enviroments are currently single player
 
 4. `bombermandiehard-v0`
     - local perspective+ four corners if you wish to have them
-    - player cannot be killed by own bombs
     - currently player is not utilizing bombs and collecting
-    - Terminates after 200 steps
+    - Terminates after 400 steps
 
 #### Rewards
 
-Rewards are given differently for some actions, see table:
+Rewards are given differently for some actions, see table in report handed in.
 
-| Enviroment | Movement | correctly placing a bomb | Wrong input | surviving detonation | Getting killed | getting terminated |
-| ------------- | ------------ | ----------------------------- | -------------- | ---------------------- | ---------------- | --------------------- |
-
-WARNING: Not all configurations and envs are compatible. You have to adjust certain netrules (flatten parameters) to get a fair chance of good training
+WARNING: Not all configurations and envs are compatible. You have to adjust certain netrules (flatten parameters) to get a fair chance of good training.
 
 ## Usage
 
-1. A3C is executed e.g.: `python a3c_bomberman.py --algorithm a3c --save-dir train_with_4corners_bombermandiehard --train` train can be omitted to start test mode.
-2.  DQN's are run like `python dqn_bomberman_4times5.py --mode=train`. Change mode to test to test.
+1. A3C is executed e.g.: `python a3c_coinman.py --algorithm a3c --save-dir train_coinman --train` train can be omitted to start test mode.
+2.  DQN's are run like `python dqn_bomberman_4times5.py --mode=train`. Change mode to `test` to test.
 
+## Included files
 
-Please refer to `A3C.md` and `DQN.md` for more information about these two algorithms or checkout the source code.
+| filename | description |
+| -------- | ----------- |
+| `*.run`  | Test execution files that demonstrate the state of the program |
+| `a3c_bomberman.py` | An port of `a3c_coinman.py` to use of `multiprocessing` instead of `thread`|
+| `a3c_bombiman.py`| test range copy for `a3c_coinman.py` in order to get A3C working with `bombermandiehard-v0` |
+| `dqn_atari_bobmerman.py` | DQN implementation based on the example in keras-rl with global perspective approach. |
+| `dqn_atari_bobmerman_small.py` | DQN with local perspective. Normalizing of observation. |
+| `dqn_bomberman_4_times5.py` | **Main** programm for generation of agents capable of playing in env `bombermandiehard-v0` |
+| `dqn_coinman.py`| Global perspective with DQN for `coinman-v0` |
+| `ppo_bomberman_4times5.py` | PPO try with `coinman2-v0` |
+| `setup.py`| Setup file for our gym |
+
+Please  checkout the source code for more information.
+
+Make sure to import `gym_bomberman`, when using our envs with other algorithm packages, so that gym can find the envs. 
